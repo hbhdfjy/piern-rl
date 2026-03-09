@@ -1,65 +1,65 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 在此仓库中工作提供指导。
 
-## Commands
+## 常用命令
 
 ```bash
-# Install dependencies
+# 安装依赖
 pip install -r requirements.txt
 pip install -e .
 
-# Run all tests
+# 运行所有测试
 pytest tests/
 
-# Run a single test file
+# 运行单个测试文件
 pytest tests/test_rl_training/test_reward.py -v
 
-# Lint
+# 代码检查
 ruff check .
 ```
 
-## Project Structure
+## 项目结构
 
-Two independent sub-projects share a common core (`piern_core/`):
+两个独立子项目共享同一个核心模块 `piern_core/`：
 
-### `piern_core/` — Shared Foundation
-Contains the three PiERN components used by both sub-projects:
-- `models/experts.py` — physically-isolated expert models (FNO, SoH network, linear calculators); always frozen after Stage 1
-- `models/text2comp.py` — Qwen3-0.6B decoder fine-tuned to map natural language → expert numerical input tensors
-- `models/router.py` — lightweight classifier over LLM hidden states `h_t`; outputs `p(e | h_t)` over expert set E
+### `piern_core/` — 共享基础模块
+包含两个子项目都会用到的三大 PiERN 组件：
+- `models/experts.py` — 物理隔离的专家模型（FNO、SoH 神经网络、线性计算器）；Stage 1 训练完成后**永远冻结**
+- `models/text2comp.py` — 基于 Qwen3-0.6B 微调的解码器，将自然语言映射为专家所需的数值输入张量
+- `models/router.py` — 轻量级分类器，输入 LLM 隐层状态 `h_t`，输出专家集合 E 上的路由概率 `p(e | h_t)`
 
-### Sub-project 1: `data_synthesis/` — Automated Data Synthesis & Augmentation
-Builds training data for all three PiERN supervised training stages without manual annotation.
+### 子项目1：`data_synthesis/` — 自动数据合成与增强
+无需人工标注，自动为 PiERN 三阶段监督训练构建训练数据。
 
-Key design:
-- `generators/` produces (text, numerical tensor) pairs per task using language templates
-- `augmenters/` applies the three perturbation strategies: Identity, Scaling (`x' = x·k`), Offset (`x' = x + b`)
-- `validators/` filters out low-quality samples (MSE outliers, dimension mismatches)
-- `pipeline/` orchestrates the full synthesis → augment → validate → export flow
+核心设计：
+- `generators/` — 按任务生成（文本, 数值张量）样本对，使用语言模板
+- `augmenters/` — 实现三种扰动策略：Identity、Scaling（`x' = x·k`）、Offset（`x' = x + b`）
+- `validators/` — 过滤低质量样本（MSE 异常值、维度不匹配等）
+- `pipeline/` — 串联合成 → 增强 → 验证 → 导出的完整流程
 
-### Sub-project 2: `rl_training/` — Multi-Turn Reinforcement Learning
-Treats PiERN inference as an MDP and trains the Router + Text2Comp via GRPO (Stage 4, after supervised Stage 3).
+### 子项目2：`rl_training/` — 多轮强化学习
+将 PiERN 推理过程建模为 MDP，通过 GRPO 对 Router 和 Text2Comp 进行策略优化（Stage 4，在监督 Stage 3 之后）。
 
-Key design:
-- `env/` wraps the full PiERN inference loop as a gym-style environment; state = (token context, hidden state, call history); action = {continue LLM | call expert e_i with input x}
-- `reward/` implements per-task reward functions: RMSE-based for PDEBench, profit formula for BMS, policy alignment for GCAM
-- `algorithms/` contains GRPO (primary), PPO, and REINFORCE; GRPO is preferred as it avoids a separate critic network
-- `trainer/` runs the rollout → reward → update loop with KL constraint against the reference LLM to prevent language degradation
+核心设计：
+- `env/` — 将完整 PiERN 推理循环封装为 gym 风格的环境；状态 = (token 上下文, 隐层状态, 调用历史)；动作 = {继续 LLM 生成 | 调用专家 e_i(输入 x)}
+- `reward/` — 按任务实现奖励函数：PDEBench 用 RMSE，BMS 用利润公式，GCAM 用政策对齐分数
+- `algorithms/` — GRPO（主要）、PPO、REINFORCE；优先使用 GRPO，无需额外 Critic 网络
+- `trainer/` — 执行 rollout → 计算奖励 → 更新参数的训练循环，含 KL 约束防止语言能力退化
 
-## Architecture Constraints
+## 架构约束
 
-- Expert models are **always frozen** — never receive gradients from either sub-project
-- The base LLM backbone is frozen during data synthesis; during RL it receives only LoRA updates
-- RL is Stage 4 and requires a Stage 3 checkpoint as initialization — do not run RL from scratch
-- MMLU/GLUE scores must be monitored during RL training to catch language degradation early
+- 专家模型**永远冻结**，两个子项目均不对其反向传播
+- 数据合成阶段 LLM 主干冻结；RL 阶段仅通过 LoRA 微调 LLM 主干
+- RL 是第四阶段，必须以 Stage 3 的检查点作为初始化，不能从零开始
+- RL 训练过程中需持续监控 MMLU/GLUE 分数，及时发现语言能力退化
 
-## Experiment Tasks
+## 实验任务
 
-| Task | Data path | Experts | Reward signal |
-|------|-----------|---------|---------------|
-| PDEBench | `data/pdebench/` | 3 FNO models (one per PDE) | RMSE vs ground truth |
-| GCAM | `data/gcam/` | 9 domain neural agents | Policy alignment score |
-| BMS | `data/bms/` | SoH network + linear profit formula | `R = Δp·P - α·c_a·1200` |
+| 任务 | 数据路径 | 专家类型 | 奖励信号 |
+|------|----------|----------|----------|
+| PDEBench | `data/pdebench/` | 3 个 FNO 模型（每个 PDE 一个）| RMSE vs 真值 |
+| GCAM | `data/gcam/` | 9 个领域神经代理 | 政策对齐分数 |
+| BMS | `data/bms/` | SoH 神经网络 + 线性利润公式 | `R = Δp·P - α·c_a·1200` |
 
-BMS is the recommended starting point for RL validation: two-step call chain (SoH → profit), clear numerical reward, small dataset.
+**建议从 BMS 开始验证 RL**：两步调用链（SoH → 利润）、奖励信号清晰、数据集小、迭代快。
