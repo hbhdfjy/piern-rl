@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Data (large files)
+data/
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+
+# Logs & outputs
+outputs/
+logs/
+wandb/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

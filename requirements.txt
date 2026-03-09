@@ -1,0 +1,25 @@
+# Core
+torch>=2.0.0
+transformers>=4.40.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# PDE / Scientific Computing
+neuraloperator>=0.3.0  # FNO implementation
+
+# Data
+h5py>=3.8.0
+pandas>=2.0.0
+
+# Training
+accelerate>=0.28.0
+peft>=0.10.0
+
+# Logging & Config
+wandb>=0.16.0
+pyyaml>=6.0
+omegaconf>=2.3.0
+
+# Utils
+tqdm>=4.65.0
+einops>=0.7.0
