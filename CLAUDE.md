@@ -12,59 +12,54 @@ pip install -e .
 # Run all tests
 pytest tests/
 
-# Run a single test
-pytest tests/test_router.py::test_routing_accuracy -v
+# Run a single test file
+pytest tests/test_rl_training/test_reward.py -v
 
 # Lint
-ruff check src/ tests/
+ruff check .
 ```
 
-## Architecture
+## Project Structure
 
-PiERN implements token-level routing between an LLM and high-precision scientific computation experts within a single Chain-of-Thought. The system is built around three decoupled components trained in sequence.
+Two independent sub-projects share a common core (`piern_core/`):
 
-### Three-Stage Training Pipeline
+### `piern_core/` — Shared Foundation
+Contains the three PiERN components used by both sub-projects:
+- `models/experts.py` — physically-isolated expert models (FNO, SoH network, linear calculators); always frozen after Stage 1
+- `models/text2comp.py` — Qwen3-0.6B decoder fine-tuned to map natural language → expert numerical input tensors
+- `models/router.py` — lightweight classifier over LLM hidden states `h_t`; outputs `p(e | h_t)` over expert set E
 
-**Stage 1 — Expert Pretraining** (`src/piern_rl/models/experts.py`)
-- Domain-specific models (e.g., FNO for PDE solving, neural nets for battery SoH) trained independently on task data
-- Parameters are **frozen** after this stage; experts are never fine-tuned jointly
-- Non-neural experts (e.g., linear profit calculators) skip this stage entirely
+### Sub-project 1: `data_synthesis/` — Automated Data Synthesis & Augmentation
+Builds training data for all three PiERN supervised training stages without manual annotation.
 
-**Stage 2 — Text-to-Computation Module** (`src/piern_rl/models/text2comp.py`)
-- A small LLM (Qwen3-0.6B) decoder trained to map natural language context → numerical expert inputs
-- Loss: MSE + optional CLIP-inspired contrastive loss (`λ` controls the balance)
-- Must learn semantic transformations: e.g., "subtract 0.1" → apply offset to input tensor
+Key design:
+- `generators/` produces (text, numerical tensor) pairs per task using language templates
+- `augmenters/` applies the three perturbation strategies: Identity, Scaling (`x' = x·k`), Offset (`x' = x + b`)
+- `validators/` filters out low-quality samples (MSE outliers, dimension mismatches)
+- `pipeline/` orchestrates the full synthesis → augment → validate → export flow
 
-**Stage 3 — Token Router** (`src/piern_rl/models/router.py`)
-- Lightweight classifier over LLM hidden states at each time step
-- Binary (single expert) or multi-class (multiple experts + LLM) cross-entropy loss
-- Monitors hidden state `h_t` and outputs routing probability `p(e | h_t)`
+### Sub-project 2: `rl_training/` — Multi-Turn Reinforcement Learning
+Treats PiERN inference as an MDP and trains the Router + Text2Comp via GRPO (Stage 4, after supervised Stage 3).
 
-### Inference Flow
+Key design:
+- `env/` wraps the full PiERN inference loop as a gym-style environment; state = (token context, hidden state, call history); action = {continue LLM | call expert e_i with input x}
+- `reward/` implements per-task reward functions: RMSE-based for PDEBench, profit formula for BMS, policy alignment for GCAM
+- `algorithms/` contains GRPO (primary), PPO, and REINFORCE; GRPO is preferred as it avoids a separate critic network
+- `trainer/` runs the rollout → reward → update loop with KL constraint against the reference LLM to prevent language degradation
 
-```
-LLM generates text tokens  →  Router detects computation trigger  →
-Text2Comp converts context to expert input  →  Expert runs high-precision computation  →
-Result appended to context  →  LLM resumes generation
-```
+## Architecture Constraints
 
-The LLM's language generation is **frozen** during expert calls; expert outputs are injected back into the token stream as context.
+- Expert models are **always frozen** — never receive gradients from either sub-project
+- The base LLM backbone is frozen during data synthesis; during RL it receives only LoRA updates
+- RL is Stage 4 and requires a Stage 3 checkpoint as initialization — do not run RL from scratch
+- MMLU/GLUE scores must be monitored during RL training to catch language degradation early
 
-### Experiment Tasks
+## Experiment Tasks
 
-Three benchmark tasks live under `data/` and have corresponding configs in `configs/`:
+| Task | Data path | Experts | Reward signal |
+|------|-----------|---------|---------------|
+| PDEBench | `data/pdebench/` | 3 FNO models (one per PDE) | RMSE vs ground truth |
+| GCAM | `data/gcam/` | 9 domain neural agents | Policy alignment score |
+| BMS | `data/bms/` | SoH network + linear profit formula | `R = Δp·P - α·c_a·1200` |
 
-| Task | Directory | Expert type |
-|------|-----------|-------------|
-| PDEBench (FNO) | `data/pdebench/` | Neural (FNO, frozen) |
-| GCAM climate policy | `data/gcam/` | 9 domain experts |
-| BMS battery management | `data/bms/` | Neural SoH + linear profit |
-
-PDEBench uses 100 language templates (80 train / 20 zero-shot test) with Identity/Scaling/Offset perturbation strategies to test generalization of the Text-to-Computation module.
-
-### Key Design Constraints
-
-- Experts are **physically isolated**: they never share gradients with the LLM backbone
-- The base LLM's weights are frozen throughout Stages 2 and 3 (only router and text2comp are trained)
-- MMLU/GLUE performance must not degrade after training — monitor this during Stage 3
-- Token budget: PiERN targets ~20 tokens per expert call vs. 500–1500 for multi-agent baselines
+BMS is the recommended starting point for RL validation: two-step call chain (SoH → profit), clear numerical reward, small dataset.

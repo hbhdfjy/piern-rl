@@ -15,6 +15,9 @@ pandas>=2.0.0
 accelerate>=0.28.0
 peft>=0.10.0
 
+# RL
+trl>=0.8.0  # GRPO / PPO for LLMs
+
 # Logging & Config
 wandb>=0.16.0
 pyyaml>=6.0
