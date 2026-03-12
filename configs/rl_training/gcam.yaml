@@ -1,0 +1,60 @@
+# GCAM（全球变化评估模型）任务 RL 训练配置
+
+# 任务标识
+task: gcam
+data_dir: data/gcam/
+
+# 模型初始化（必须从 Stage 3 检查点启动）
+model:
+  base_model: Qwen/Qwen3-0.6B
+  stage3_checkpoint: null  # 填入 Stage 3 训练完成后的检查点路径
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+
+# GRPO 超参数
+grpo:
+  num_rollouts: 8           # 每步 rollout 数量
+  max_new_tokens: 512       # GCAM 需要更长输出（9 个专家）
+  temperature: 0.7
+  kl_coef: 0.05             # KL 惩罚系数（防止语言能力退化）
+  clip_range: 0.2           # PPO clip 范围
+
+# 训练循环
+training:
+  max_steps: 10000
+  batch_size: 2             # GCAM 专家多，显存占用大
+  gradient_accumulation_steps: 8
+  learning_rate: 5.0e-6
+  warmup_steps: 200
+  save_steps: 1000
+  eval_steps: 500
+
+# 奖励函数（GCAM）
+reward:
+  # 政策对齐分数：衡量模型输出与 GCAM 参考政策的一致性
+  alignment_metric: cosine  # 对齐度量方式
+  reference_policy_path: null  # 参考政策文件路径
+
+# 专家配置（9 个领域神经代理）
+experts:
+  n_experts: 9
+  domains:
+    - energy
+    - land_use
+    - water
+    - agriculture
+    - transport
+    - industry
+    - buildings
+    - afolu
+    - ccs
+
+# 日志
+logging:
+  wandb_project: piern-rl
+  wandb_run_name: gcam-grpo
+  log_steps: 10
+
+# 随机种子
+seed: 42

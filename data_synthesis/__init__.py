@@ -1,0 +1,3 @@
+from data_synthesis.pipeline import run_pipeline
+
+__all__ = ["run_pipeline"]

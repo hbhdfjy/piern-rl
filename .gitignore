@@ -11,8 +11,15 @@ build/
 venv/
 env/
 
-# Data (large files)
-data/
+# Data（忽略大数据文件，但保留 .gitkeep 占位符）
+data/**/*.h5
+data/**/*.hdf5
+data/**/*.pt
+data/**/*.pth
+data/**/*.ckpt
+data/**/*.nc
+data/**/*.npy
+data/**/*.npz
 *.h5
 *.hdf5
 *.pt

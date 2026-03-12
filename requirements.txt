@@ -7,6 +7,9 @@ scipy>=1.10.0
 # PDE / Scientific Computing
 neuraloperator>=0.3.0  # FNO implementation
 
+# 地质数据合成
+flopy>=3.7.0           # MODFLOW 地下水正演（数据合成管线）
+
 # Data
 h5py>=3.8.0
 pandas>=2.0.0

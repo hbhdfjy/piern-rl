@@ -1,0 +1,57 @@
+# flopy (MODFLOW) 数据合成配置
+
+# 输出路径
+output_dir: data/modflow
+output_file: groundwater_timeseries.h5
+
+# 合成规模
+n_samples: 1000          # 生成样本总数
+n_timesteps: 365         # 时间步数（天）
+n_wells: 5               # 观测井数量
+
+# 模型网格
+grid:
+  nrow: 20               # 行数
+  ncol: 20               # 列数
+  nlay: 1                # 层数（单层非承压含水层）
+  delr: 100.0            # 列间距（米）
+  delc: 100.0            # 行间距（米）
+  top: 10.0              # 含水层顶部高程（米）
+  botm: 0.0              # 含水层底部高程（米）
+
+# 参数采样范围（均匀分布）
+params:
+  # 水力传导系数 K（m/day）
+  hk_min: 1.0
+  hk_max: 50.0
+  # 储水系数（无量纲）
+  sy_min: 0.05
+  sy_max: 0.30
+  # 抽水量 Q（m³/day，负值为抽水）
+  pumping_min: -500.0
+  pumping_max: -50.0
+  # 初始水头（m）
+  strt_min: 5.0
+  strt_max: 9.0
+  # 补给量 rch（m/day）
+  rch_min: 0.0001
+  rch_max: 0.002
+
+# 扰动增强
+augmentation:
+  identity_ratio: 0.4     # Identity 扰动比例
+  scaling_ratio: 0.3      # Scaling 扰动比例
+  offset_ratio: 0.3       # Offset 扰动比例
+  scaling_k_min: 0.8      # Scaling 系数下界
+  scaling_k_max: 1.2      # Scaling 系数上界
+  offset_b_std: 0.1       # Offset 偏移量标准差（相对于信号标准差）
+
+# 质量过滤
+validation:
+  max_nan_ratio: 0.05     # 最大允许 NaN 比例
+  min_variance: 1e-6      # 最小方差（过滤常数序列）
+  max_head_value: 15.0    # 最大水头值（超出视为发散）
+  min_head_value: -5.0    # 最小水头值
+
+# 随机种子
+seed: 42
