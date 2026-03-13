@@ -116,7 +116,7 @@ templates = [
 
 ### 实现模块（待开发）
 ```python
-# data_synthesis/text_generators/modflow_text_generator.py
+# piern/text2comp/modflow_text_generator.py
 
 def generate_text_param_pairs(
     params_array: np.ndarray,      # [N, n_params]

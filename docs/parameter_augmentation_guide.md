@@ -84,7 +84,7 @@ Step 6: 合并原始样本和新样本...
 ```bash
 # 使用 V2 配置和 pipeline
 python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-    --config configs/data_synthesis/modflow_v2.yaml
+    --config configs/modflow_v2.yaml
 ```
 
 **预期输出**：
@@ -122,7 +122,7 @@ Step 4/4: 写入 HDF5...
 
 ## ⚙️ 配置说明
 
-### 配置文件：`configs/data_synthesis/modflow_v2.yaml`
+### 配置文件：`configs/modflow_v2.yaml`
 
 ```yaml
 # 参数空间采样增强
@@ -417,7 +417,7 @@ python scripts/data_synthesis/test_parameter_augmentation.py
 
 # 确认无误后，再完整运行
 python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-    --config configs/data_synthesis/modflow_v2.yaml
+    --config configs/modflow_v2.yaml
 ```
 
 ### 2. 监控成功率
@@ -472,7 +472,7 @@ python scripts/data_synthesis/test_parameter_augmentation.py
 
 # 2. 完整运行
 python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-    --config configs/data_synthesis/modflow_v2.yaml
+    --config configs/modflow_v2.yaml
 
 # 3. 验证效果
 python scripts/data_synthesis/inspect_stage1_data.py \

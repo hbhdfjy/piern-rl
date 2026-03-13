@@ -221,8 +221,8 @@ MODFLOW → timeseries_2 = [7.28, 7.26, 7.23, ..., 6.78]  # 新的物理模拟�
 
 ```bash
 # 使用新的配置文件
-cp configs/data_synthesis/modflow.yaml configs/data_synthesis/modflow_v1_backup.yaml
-cp configs/data_synthesis/modflow_v2.yaml configs/data_synthesis/modflow.yaml
+cp configs/modflow.yaml configs/modflow_v1_backup.yaml
+cp configs/modflow_v2.yaml configs/modflow.yaml
 ```
 
 或者手动修改 `modflow.yaml`：
@@ -250,11 +250,11 @@ augmentation:
 ```bash
 # 旧版
 python -m data_synthesis.pipeline.modflow_pipeline \
-    --config configs/data_synthesis/modflow.yaml
+    --config configs/modflow.yaml
 
 # 新版
 python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-    --config configs/data_synthesis/modflow_v2.yaml
+    --config configs/modflow_v2.yaml
 ```
 
 #### 3. 删除旧数据，重新生成
@@ -266,7 +266,7 @@ mv data/modflow/*.h5 data/modflow_v1_backup/
 
 # 重新生成
 python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-    --config configs/data_synthesis/modflow_v2.yaml
+    --config configs/modflow_v2.yaml
 ```
 
 #### 4. 对比效果
@@ -361,7 +361,7 @@ n_augmented_per_sample: 2.0   # 3 倍
 ```bash
 # 1. 使用新配置
 python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-    --config configs/data_synthesis/modflow_v2.yaml
+    --config configs/modflow_v2.yaml
 
 # 2. 删除旧数据
 rm -rf data/modflow/*_v1.h5
