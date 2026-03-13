@@ -46,3 +46,6 @@ wandb/
 
 # Test output
 data/text2comp/test/
+
+# Environment variables (API keys, secrets)
+.env
