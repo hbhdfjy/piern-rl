@@ -13,8 +13,8 @@ import h5py
 import yaml
 from tqdm import tqdm
 
-from data_synthesis.text_generators.llm_client import LLMClient
-from data_synthesis.text_generators.llm_text_generator import LLMTextGenerator
+from piern.core.llm_client import LLMClient
+from piern.text2comp.generator import LLMTextGenerator
 
 logging.basicConfig(
     level=logging.INFO,

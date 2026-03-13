@@ -9,7 +9,7 @@ import random
 from typing import Dict, List, Optional
 import json
 
-from .llm_client import LLMClient
+from piern.core.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 

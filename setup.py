@@ -21,7 +21,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "piern-modflow=data_synthesis.pipeline.modflow_pipeline:main",
+            "piern-modflow=piern.simulators.modflow.pipeline:main",
+            "piern-text2comp=piern.text2comp.pipeline:main",
         ],
     },
 )

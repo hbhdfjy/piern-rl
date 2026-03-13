@@ -21,8 +21,8 @@ MODFLOW 数据合成管线 V2 - 支持参数空间采样增强。
   HDF5 存储（save_dataset）
 
 用法：
-  python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-      --config configs/data_synthesis/modflow.yaml
+  python -m piern.simulators.modflow.pipeline \
+      --config configs/modflow/default.yaml
 """
 
 import argparse
@@ -33,10 +33,10 @@ import time
 import numpy as np
 import yaml
 
-from data_synthesis.generators.modflow_generator import generate_batch
-from data_synthesis.generators.modflow_generator_with_params import generate_batch_from_params
-from data_synthesis.validators.quality_filter import filter_dataset
-from data_synthesis.utils.hdf5_writer import save_dataset
+from piern.simulators.modflow.generator import generate_batch
+from piern.simulators.modflow.generator_with_params import generate_batch_from_params
+from piern.core.validation import filter_dataset
+from piern.core.storage import save_dataset
 
 logging.basicConfig(
     level=logging.INFO,

@@ -24,52 +24,89 @@
 pip install -r requirements.txt
 pip install -e .
 
-# Stage 1: 批量生成 MODFLOW 数据
-python scripts/data_synthesis/batch_generate_modflow.py --skip-existing
+# Stage 1: 单个场景生成
+python -m piern.simulators.modflow.pipeline \
+    --config configs/modflow/default.yaml
 
-# Stage 2: 生成 Text-to-Computation 训练数据（完全 LLM）
-python -m data_synthesis.pipeline.text2comp_pipeline_llm \
-    --config configs/data_synthesis/text2comp_llm.yaml
+# Stage 1: 批量生成多个场景
+python scripts/modflow/batch_generate.py --skip-existing
+
+# Stage 2: 生成 Text-to-Computation 训练数据
+python -m piern.text2comp.pipeline \
+    --config configs/text2comp/default.yaml
 
 # 检查数据
-python scripts/data_synthesis/inspect_stage1_data.py data/modflow/baseline_groundwater_timeseries.h5
-python scripts/data_synthesis/inspect_stage2_data.py data/text2comp/training_data_llm.jsonl
-python scripts/data_synthesis/summarize_all_stage1_data.py
+python scripts/modflow/inspect_data.py data/modflow/baseline_groundwater_timeseries.h5
+python scripts/text2comp/inspect_data.py data/text2comp/training_data_llm.jsonl
+python scripts/utils/summarize_all.py
 
 # 测试参数空间采样增强
-python scripts/data_synthesis/test_parameter_augmentation.py
+python scripts/modflow/test_augmentation.py
 ```
 
 ## 项目结构
 
-### `data_synthesis/` — 数据合成管线
-无需人工标注，自动为 PiERN 训练构建高质量数据集。
+```
+piern/
+├── piern/                          # 核心包
+│   ├── core/                       # 核心共享层
+│   │   ├── storage.py              # HDF5/JSONL 读写
+│   │   ├── validation.py           # 通用质量过滤
+│   │   └── llm_client.py           # LLM 客户端
+│   │
+│   ├── simulators/                 # 物理模拟器（每个独立隔离）
+│   │   └── modflow/                # MODFLOW 地下水模拟
+│   │       ├── requirements.txt    # flopy 依赖
+│   │       ├── generator.py        # 数据生成
+│   │       ├── generator_with_params.py  # 从指定参数生成
+│   │       ├── augmenter.py        # 参数空间采样增强
+│   │       └── pipeline.py         # Stage 1 pipeline
+│   │
+│   ├── text2comp/                  # Stage 2: Text-to-Computation
+│   │   ├── generator.py            # LLM 文本生成器
+│   │   └── pipeline.py             # Stage 2 pipeline
+│   │
+│   └── router/                     # Stage 3: Token Router（待实现）
+│
+├── configs/
+│   ├── modflow/                    # MODFLOW 配置
+│   │   ├── default.yaml
+│   │   └── variants/               # 场景变体（14 个）
+│   └── text2comp/                  # Text-to-Computation 配置
+│       └── default.yaml
+│
+├── scripts/
+│   ├── modflow/                    # MODFLOW 相关脚本
+│   │   ├── generate_stage1.py      # Stage 1 数据生成
+│   │   ├── test_augmentation.py    # 测试增强
+│   │   ├── batch_generate.py       # 批量生成（多场景）
+│   │   └── inspect_data.py         # 数据检查
+│   ├── text2comp/                  # Text-to-Computation 脚本
+│   │   ├── generate_stage2.py      # Stage 2 数据生成
+│   │   └── inspect_data.py         # 数据检查
+│   └── utils/                      # 通用工具脚本
+│       └── summarize_all.py        # 汇总所有数据
+│
+└── data/                           # 数据目录（.gitignore）
+    ├── modflow/
+    └── text2comp/
+```
 
-核心设计：
-- `generators/` — 物理模拟器驱动的数据生成（当前：MODFLOW 地下水位）
-  - 从参数空间采样
-  - 调用物理模拟器正演
-  - 输出时序数据
-- `augmenters/` — 参数空间采样增强（V2）
-  - 在参数邻域采样新参数（±5% 扰动）
-  - 运行 MODFLOW 生成新时序
-  - 保持物理一致性（不同参数 → 不同输出）
-  - 提高模型精度 2-3 倍
-- `validators/` — 质量过滤
-  - 过滤 NaN/Inf 样本
-  - 过滤常数序列（方差过小）
-  - 过滤物理不合理值
-- `pipeline/` — 端到端流程编排
-  - `modflow_pipeline_v2.py` — Stage 1 数据生成（使用参数空间采样增强）
-  - `text2comp_pipeline_llm.py` — Stage 2 完全 LLM 数据生成
-  - 支持进度条、日志、元数据保存
-- `text_generators/` — 完全 LLM 文本生成
-  - `llm_client.py` — 统一的 LLM API 客户端
-  - `llm_text_generator.py` — LLM 文本生成器（零模板依赖）
-- `utils/` — 工具函数
-  - HDF5 读写（压缩存储）
+## 核心设计
 
-## 数据合成流程
+### 1. 模块化架构
+- **核心层**（`piern/core/`）：通用工具，所有模拟器共享
+- **模拟器层**（`piern/simulators/`）：每个物理模拟器独立隔离
+- **任务层**（`piern/text2comp/`, `piern/router/`）：Stage 2/3 数据生成
+
+### 2. 环境隔离
+每个物理模拟器有自己的：
+- `requirements.txt` - 独立的依赖
+- `generator.py` - 数据生成逻辑
+- `augmenter.py` - 增强策略
+- `pipeline.py` - 完整流程
+
+### 3. Stage 1 数据生成流程
 
 ```
 参数采样（均匀分布）
@@ -86,29 +123,65 @@ python scripts/data_synthesis/test_parameter_augmentation.py
 HDF5 存储（gzip 压缩）
 ```
 
+### 4. Stage 2 数据生成流程
+
+```
+加载 Stage 1 数据（所有场景）
+    ↓
+完全 LLM 生成文本描述
+  - 为每个样本生成 N 个不同的文本
+  - 零模板依赖，最大化多样性
+    ↓
+JSONL 存储
+```
+
 ## 任务支持
 
 本仓库仅支持 **MODFLOW 地下水模拟任务**：
 
 | 任务 | 状态 | 数据路径 | 输入参数 | Stage 1 输出 | Stage 2 输出 |
 |------|------|----------|----------|--------------|--------------|
-| MODFLOW 地下水位 | ✅ 已完成 | `data/modflow/` | 5 个标量（hk, sy, pumping, strt, rch）| 14 个 HDF5 文件<br>6,600 样本 | training_data_v2.jsonl<br>33,000 训练对 |
+| MODFLOW 地下水位 | ✅ 已完成 | `data/modflow/` | 5 个标量（hk, sy, pumping, strt, rch）| 14 个 HDF5 文件<br>6,600 样本 | training_data_llm.jsonl<br>33,000 训练对 |
 
-## 扩展新任务
+## 添加新的物理模拟器
 
-要添加新任务的数据合成，需要：
+要添加新的物理模拟器（如 OpenFOAM、FEniCS 等）：
 
-1. **创建生成器**：在 `data_synthesis/generators/` 下实现 `<task>_generator.py`
-   - 实现 `generate_sample()` 和 `generate_batch()` 函数
-   - 调用物理模拟器或专家模型
-   - 返回 (时序数据, 参数) 元组
+1. **创建独立目录**：`piern/simulators/<simulator_name>/`
 
-2. **实现增强器**：在 `augmenters/` 下实现参数空间采样增强
-   - 扰动参数后重新运行物理模拟
-   - 保持物理一致性
+2. **创建依赖文件**：`requirements.txt`
+   ```txt
+   # 该模拟器特定的依赖
+   some-simulator-package>=1.0.0
+   ```
 
-3. **定制验证器**：在 `validators/` 下实现任务特定的质量检查
+3. **实现生成器**：`generator.py`
+   ```python
+   def generate_sample(params: dict, cfg: dict) -> np.ndarray:
+       """从参数生成单个样本"""
+       pass
 
-4. **创建管线**：在 `pipeline/` 下创建 `<task>_pipeline_v2.py`，串联上述模块
+   def generate_batch(cfg: dict, n_samples: int) -> tuple:
+       """批量生成样本"""
+       pass
+   ```
 
-5. **添加配置**：在 `configs/data_synthesis/` 下创建 `<task>_v2.yaml`
+4. **实现增强器**：`augmenter.py`
+   ```python
+   def augment_with_parameter_sampling(...):
+       """参数空间采样增强"""
+       pass
+   ```
+
+5. **实现 pipeline**：`pipeline.py`
+   ```python
+   def run_pipeline(config_path: str):
+       """完整的 Stage 1 流程"""
+       pass
+   ```
+
+6. **创建配置**：`configs/<simulator_name>/default.yaml`
+
+7. **创建脚本**：`scripts/<simulator_name>/generate_stage1.py`
+
+所有新模拟器都遵循相同的接口和流程，确保一致性和可维护性。

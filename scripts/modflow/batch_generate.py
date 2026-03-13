@@ -19,7 +19,7 @@ import os
 class BatchMODFLOWGenerator:
     """批量 MODFLOW 数据生成器。"""
 
-    def __init__(self, config_dir: str = "configs/data_synthesis/modflow_variants"):
+    def __init__(self, config_dir: str = "configs/modflow/variants"):
         self.config_dir = Path(config_dir)
         self.modflow_bin = os.path.expanduser("~/bin/mf2005")
 
@@ -67,7 +67,7 @@ class BatchMODFLOWGenerator:
             cmd = [
                 "python",
                 "-m",
-                "data_synthesis.pipeline.modflow_pipeline",
+                "piern.simulators.modflow.pipeline",
                 "--config",
                 str(config_path),
             ]
@@ -225,7 +225,7 @@ def main():
     parser.add_argument(
         "--config-dir",
         type=str,
-        default="configs/data_synthesis/modflow_variants",
+        default="configs/modflow/variants",
         help="配置文件目录",
     )
     parser.add_argument(
