@@ -28,9 +28,8 @@ pip install -e .
 python scripts/data_synthesis/batch_generate_modflow.py --skip-existing
 
 # Stage 2: 生成 Text-to-Computation 训练数据（完全 LLM）
-python scripts/data_synthesis/quick_test_api.py  # 快速测试
-python scripts/data_synthesis/run_text2comp_llm.py --dry-run  # Dry-run
-python scripts/data_synthesis/run_text2comp_llm.py  # 完整运行
+python -m data_synthesis.pipeline.text2comp_pipeline_llm \
+    --config configs/data_synthesis/text2comp_llm.yaml
 
 # 检查数据
 python scripts/data_synthesis/inspect_stage1_data.py data/modflow/baseline_groundwater_timeseries.h5

@@ -1,0 +1,64 @@
+# Stage 2 Text-to-Computation 训练数据生成配置
+# 完全 LLM 生成方案（零模板依赖）
+
+# ========================================
+# LLM 配置
+# ========================================
+llm:
+  provider: siliconflow
+  model: "Qwen/Qwen2.5-7B-Instruct"
+  api_key: "${SILICONFLOW_API_KEY}"  # 从环境变量读取
+  base_url: "https://api.siliconflow.cn/v1"
+  max_retries: 3
+  timeout: 30
+  temperature: 0.8          # 控制生成多样性（0.7-0.9 推荐）
+  max_tokens: 200           # 每个文本描述的最大长度
+  style_diversity: true     # 启用风格多样化
+
+# ========================================
+# 数据源配置
+# ========================================
+# Stage 1 数据目录（包含所有场景的 HDF5 文件）
+stage1_data_dir: "data/modflow"
+
+# ========================================
+# 生成配置
+# ========================================
+# 每个样本生成多少个不同的文本描述
+n_variants_per_sample: 5
+
+# 是否验证生成的文本（检查参数占位符）
+validate_output: true
+
+# ========================================
+# 输出配置
+# ========================================
+output_dir: "data/text2comp"
+output_file: "training_data_llm.jsonl"
+
+# ========================================
+# 说明
+# ========================================
+# 运行方式：
+#   python -m data_synthesis.pipeline.text2comp_pipeline_llm \
+#       --config configs/data_synthesis/text2comp_llm.yaml
+#
+# 完全 LLM 生成方案：
+#   - 为每个样本直接生成 N 个不同的文本描述
+#   - 不依赖预先生成的模板库
+#   - 每个文本都是独立生成的，最大化多样性
+#
+# 预期输出：
+#   - training_data_llm.jsonl（训练数据，每行一个 JSON 对象）
+#   - data_summary_llm.json（统计报告）
+#
+# 预计规模（假设 14 个场景，每个 500 样本，每样本 5 个变体）：
+#   - 总样本对数：14 × 500 × 5 = 35,000
+#
+# 预计耗时（取决于 LLM API 速度）：
+#   - 使用 SiliconFlow Qwen2.5-7B：约 30-60 分钟
+#   - 使用 OpenAI GPT-3.5：约 2-4 小时
+#
+# 预计成本：
+#   - SiliconFlow Qwen2.5-7B：约 $0.30-0.50
+#   - OpenAI GPT-3.5：约 $5-10
