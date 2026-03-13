@@ -26,14 +26,65 @@ from typing import Dict, Any
 logger = logging.getLogger(__name__)
 
 
-# 观测井位置（行、列索引，0-based）
-_WELL_POSITIONS = [
-    (5, 5),
-    (5, 14),
-    (10, 10),
-    (14, 5),
-    (14, 14),
-]
+def _get_well_positions(nrow: int, ncol: int, n_wells: int) -> list[tuple[int, int]]:
+    """
+    根据网格大小动态生成观测井位置。
+
+    策略：均匀分布在网格中，避免边界和中心抽水井。
+    """
+    positions = []
+
+    if n_wells == 3:
+        # 3 井：左上、右上、中下
+        positions = [
+            (nrow // 4, ncol // 4),
+            (nrow // 4, 3 * ncol // 4),
+            (3 * nrow // 4, ncol // 2),
+        ]
+    elif n_wells == 5:
+        # 5 井：四角 + 中心偏移
+        positions = [
+            (nrow // 4, ncol // 4),
+            (nrow // 4, 3 * ncol // 4),
+            (nrow // 2, ncol // 2),
+            (3 * nrow // 4, ncol // 4),
+            (3 * nrow // 4, 3 * ncol // 4),
+        ]
+    elif n_wells == 7:
+        # 7 井：六边形 + 中心
+        positions = [
+            (nrow // 4, ncol // 4),
+            (nrow // 4, ncol // 2),
+            (nrow // 4, 3 * ncol // 4),
+            (nrow // 2, ncol // 2),
+            (3 * nrow // 4, ncol // 4),
+            (3 * nrow // 4, ncol // 2),
+            (3 * nrow // 4, 3 * ncol // 4),
+        ]
+    elif n_wells == 9:
+        # 9 井：3x3 网格
+        positions = [
+            (nrow // 5, ncol // 5),
+            (nrow // 5, ncol // 2),
+            (nrow // 5, 4 * ncol // 5),
+            (nrow // 2, ncol // 5),
+            (nrow // 2, ncol // 2),
+            (nrow // 2, 4 * ncol // 5),
+            (4 * nrow // 5, ncol // 5),
+            (4 * nrow // 5, ncol // 2),
+            (4 * nrow // 5, 4 * ncol // 5),
+        ]
+    else:
+        # 默认：随机分布
+        for i in range(n_wells):
+            r = (i + 1) * nrow // (n_wells + 1)
+            c = (i % 3 + 1) * ncol // 4
+            positions.append((r, c))
+
+    # 确保所有位置都在范围内
+    positions = [(min(r, nrow - 1), min(c, ncol - 1)) for r, c in positions]
+
+    return positions
 
 
 def _sample_params(cfg: Dict[str, Any], rng: np.random.Generator) -> Dict[str, float]:
@@ -74,7 +125,7 @@ def _run_modflow(
     botm = grid["botm"]
     n_timesteps = cfg["n_timesteps"]
     n_wells = cfg["n_wells"]
-    well_positions = _WELL_POSITIONS[:n_wells]
+    well_positions = _get_well_positions(nrow, ncol, n_wells)
 
     model_name = "modflow_sim"
 

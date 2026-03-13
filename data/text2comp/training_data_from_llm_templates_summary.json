@@ -1,0 +1,8 @@
+{
+  "output_file": "data/text2comp/training_data_from_llm_templates.jsonl",
+  "total_pairs": 6600,
+  "n_templates": 57,
+  "n_samples": 6600,
+  "n_variants_per_sample": 1,
+  "seed": 42
+}

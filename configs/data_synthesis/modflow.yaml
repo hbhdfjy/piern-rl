@@ -49,7 +49,7 @@ augmentation:
 # 质量过滤
 validation:
   max_nan_ratio: 0.05     # 最大允许 NaN 比例
-  min_variance: 1e-6      # 最小方差（过滤常数序列）
+  min_variance: 0.000001  # 最小方差（过滤常数序列）
   max_head_value: 15.0    # 最大水头值（超出视为发散）
   min_head_value: -5.0    # 最小水头值
 

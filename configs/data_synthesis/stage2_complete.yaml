@@ -1,0 +1,63 @@
+# Stage 2 完整流程配置
+# 一键生成：LLM 生成模板 + 使用模板生成训练数据
+
+# ========================================
+# LLM 配置
+# ========================================
+llm:
+  provider: siliconflow
+  model: "Qwen/Qwen2.5-7B-Instruct"
+  api_key: "sk-ofpvsbvjrryqsnedalqhkzruejsfpqleryztbqnsdpmuekwp"
+  base_url: "https://api.siliconflow.cn/v1"
+  timeout: 120
+
+# ========================================
+# 模板生成配置
+# ========================================
+# 目标模板数量
+n_templates: 100
+
+# 分批生成（避免单次请求过大）
+template_batch_size: 20  # 每批生成 20 个模板
+
+# ========================================
+# 数据生成配置
+# ========================================
+# Stage 1 数据目录
+stage1_data_dir: "data/modflow"
+
+# 每个样本使用多少个不同的模板
+n_variants_per_sample: 1
+
+# 随机种子
+seed: 42
+
+# ========================================
+# 输出配置
+# ========================================
+output_dir: "data/text2comp"
+output_file: "training_data_stage2_complete.jsonl"
+
+# ========================================
+# 说明
+# ========================================
+# 运行方式：
+#   python scripts/data_synthesis/run_stage2_complete.py
+#
+# 流程：
+#   1. 使用 LLM 生成模板（分批生成，避免超时）
+#   2. 加载 Stage 1 数据
+#   3. 使用模板批量生成训练数据
+#
+# 预期输出：
+#   - templates_llm_generated.json（生成的模板）
+#   - training_data_stage2_complete.jsonl（训练数据）
+#   - training_data_stage2_complete_summary.json（统计报告）
+#
+# 预计耗时：
+#   - 模板生成：约 1-2 分钟（100 个模板）
+#   - 数据生成：< 1 秒（6,600 个样本）
+#   - 总计：约 1-2 分钟
+#
+# 预计成本：
+#   - 约 $0.01（使用 Qwen2.5-7B）

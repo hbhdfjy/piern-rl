@@ -2,6 +2,21 @@
 
 本文件为 Claude Code (claude.ai/code) 在此仓库中工作提供指导。
 
+## 项目定位
+
+本仓库**仅包含 PiERN 的数据合成管线**，不包含 PiERN 模型本身的实现（Router、Text2Comp、专家模型等）。
+
+## 当前聚焦
+
+**MODFLOW 地下水模拟任务**：本仓库专注于 MODFLOW 任务的完整三阶段数据生成管线。
+
+当前优先级：
+1. ✅ Stage 1：MODFLOW 专家模型数据（已完成 - 14 个场景，6,600 样本）
+2. ✅ Stage 2：MODFLOW Text-to-Computation 数据（已完成 - 33,000 训练对）
+3. 🎯 Stage 3：MODFLOW Token Router 数据（下一步）
+
+**注**：其他任务（PDEBench、GCAM、BMS）的数据合成已在论文写作阶段完成，不包含在本仓库中。
+
 ## 常用命令
 
 ```bash
@@ -9,57 +24,85 @@
 pip install -r requirements.txt
 pip install -e .
 
-# 运行所有测试
-pytest tests/
+# Stage 1: 批量生成 MODFLOW 数据
+python scripts/data_synthesis/batch_generate_modflow.py --skip-existing
 
-# 运行单个测试文件
-pytest tests/test_rl_training/test_reward.py -v
+# Stage 2: 生成 Text-to-Computation 训练数据（完全 LLM）
+python scripts/data_synthesis/quick_test_api.py  # 快速测试
+python scripts/data_synthesis/run_text2comp_llm.py --dry-run  # Dry-run
+python scripts/data_synthesis/run_text2comp_llm.py  # 完整运行
 
-# 代码检查
-ruff check .
+# 检查数据
+python scripts/data_synthesis/inspect_stage1_data.py data/modflow/baseline_groundwater_timeseries.h5
+python scripts/data_synthesis/inspect_stage2_data.py data/text2comp/training_data_llm.jsonl
+python scripts/data_synthesis/summarize_all_stage1_data.py
+
+# 运行测试
+pytest tests/test_data_synthesis/test_modflow_pipeline.py -v
 ```
 
 ## 项目结构
 
-两个独立子项目共享同一个核心模块 `piern_core/`：
-
-### `piern_core/` — 共享基础模块
-包含两个子项目都会用到的三大 PiERN 组件：
-- `models/experts.py` — 物理隔离的专家模型（FNO、SoH 神经网络、线性计算器）；Stage 1 训练完成后**永远冻结**
-- `models/text2comp.py` — 基于 Qwen3-0.6B 微调的解码器，将自然语言映射为专家所需的数值输入张量
-- `models/router.py` — 轻量级分类器，输入 LLM 隐层状态 `h_t`，输出专家集合 E 上的路由概率 `p(e | h_t)`
-
-### 子项目1：`data_synthesis/` — 自动数据合成与增强
-无需人工标注，自动为 PiERN 三阶段监督训练构建训练数据。
+### `data_synthesis/` — 数据合成管线
+无需人工标注，自动为 PiERN 训练构建高质量数据集。
 
 核心设计：
-- `generators/` — 按任务生成（文本, 数值张量）样本对，使用语言模板
-- `augmenters/` — 实现三种扰动策略：Identity、Scaling（`x' = x·k`）、Offset（`x' = x + b`）
-- `validators/` — 过滤低质量样本（MSE 异常值、维度不匹配等）
-- `pipeline/` — 串联合成 → 增强 → 验证 → 导出的完整流程
+- `generators/` — 物理模拟器驱动的数据生成（当前：MODFLOW 地下水位）
+  - 从参数空间采样
+  - 调用物理模拟器正演
+  - 输出时序数据
+- `augmenters/` — 三种扰动策略：Identity、Scaling（`x' = x·k`）、Offset（`x' = x + b`）
+  - 模拟真实场景噪声（传感器漂移、系统偏差）
+  - 扩充数据集规模
+- `validators/` — 质量过滤
+  - 过滤 NaN/Inf 样本
+  - 过滤常数序列（方差过小）
+  - 过滤物理不合理值
+- `pipeline/` — 端到端流程编排
+  - `modflow_pipeline.py` — Stage 1 数据生成
+  - `text2comp_pipeline_llm.py` — Stage 2 完全 LLM 数据生成
+  - 支持进度条、日志、元数据保存
+- `text_generators/` — 完全 LLM 文本生成
+  - `llm_client.py` — 统一的 LLM API 客户端
+  - `llm_text_generator.py` — LLM 文本生成器（零模板依赖）
+- `utils/` — 工具函数
+  - HDF5 读写（压缩存储）
 
-### 子项目2：`rl_training/` — 多轮强化学习
-将 PiERN 推理过程建模为 MDP，通过 GRPO 对 Router 和 Text2Comp 进行策略优化（Stage 4，在监督 Stage 3 之后）。
+## 数据合成流程
 
-核心设计：
-- `env/` — 将完整 PiERN 推理循环封装为 gym 风格的环境；状态 = (token 上下文, 隐层状态, 调用历史)；动作 = {继续 LLM 生成 | 调用专家 e_i(输入 x)}
-- `reward/` — 按任务实现奖励函数：PDEBench 用 RMSE，BMS 用利润公式，GCAM 用政策对齐分数
-- `algorithms/` — GRPO（主要）、PPO、REINFORCE；优先使用 GRPO，无需额外 Critic 网络
-- `trainer/` — 执行 rollout → 计算奖励 → 更新参数的训练循环，含 KL 约束防止语言能力退化
+```
+参数采样（均匀分布）
+    ↓
+物理模拟器正演（MODFLOW）
+    ↓
+质量过滤（NaN、方差、物理范围）
+    ↓
+扰动增强（Identity/Scaling/Offset）
+    ↓
+HDF5 存储（gzip 压缩）
+```
 
-## 架构约束
+## 任务支持
 
-- 专家模型**永远冻结**，两个子项目均不对其反向传播
-- 数据合成阶段 LLM 主干冻结；RL 阶段仅通过 LoRA 微调 LLM 主干
-- RL 是第四阶段，必须以 Stage 3 的检查点作为初始化，不能从零开始
-- RL 训练过程中需持续监控 MMLU/GLUE 分数，及时发现语言能力退化
+本仓库仅支持 **MODFLOW 地下水模拟任务**：
 
-## 实验任务
+| 任务 | 状态 | 数据路径 | 输入参数 | Stage 1 输出 | Stage 2 输出 |
+|------|------|----------|----------|--------------|--------------|
+| MODFLOW 地下水位 | ✅ 已完成 | `data/modflow/` | 5 个标量（hk, sy, pumping, strt, rch）| 14 个 HDF5 文件<br>6,600 样本 | training_data_v2.jsonl<br>33,000 训练对 |
 
-| 任务 | 数据路径 | 专家类型 | 奖励信号 |
-|------|----------|----------|----------|
-| PDEBench | `data/pdebench/` | 3 个 FNO 模型（每个 PDE 一个）| RMSE vs 真值 |
-| GCAM | `data/gcam/` | 9 个领域神经代理 | 政策对齐分数 |
-| BMS | `data/bms/` | SoH 神经网络 + 线性利润公式 | `R = Δp·P - α·c_a·1200` |
+## 扩展新任务
 
-**建议从 BMS 开始验证 RL**：两步调用链（SoH → 利润）、奖励信号清晰、数据集小、迭代快。
+要添加新任务的数据合成，需要：
+
+1. **创建生成器**：在 `data_synthesis/generators/` 下实现 `<task>_generator.py`
+   - 实现 `generate_sample()` 和 `generate_batch()` 函数
+   - 调用物理模拟器或专家模型
+   - 返回 (时序数据, 参数) 元组
+
+2. **复用增强器**：直接使用 `augmenters/perturbation.py` 中的三种扰动策略
+
+3. **定制验证器**：在 `validators/` 下实现任务特定的质量检查
+
+4. **创建管线**：在 `pipeline/` 下创建 `<task>_pipeline.py`，串联上述模块
+
+5. **添加配置**：在 `configs/data_synthesis/` 下创建 `<task>.yaml`

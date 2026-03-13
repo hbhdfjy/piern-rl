@@ -38,3 +38,11 @@ wandb/
 
 # OS
 .DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*~
+
+# Test output
+data/text2comp/test/

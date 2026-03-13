@@ -52,8 +52,14 @@ def save_dataset(
             for k, v in metadata.items():
                 if isinstance(v, (int, float, str, bool)):
                     meta_grp.attrs[k] = v
-                elif isinstance(v, (list, np.ndarray)):
-                    meta_grp.create_dataset(k, data=np.array(v))
+                elif isinstance(v, list):
+                    # 处理字符串列表：转为字节字符串
+                    if v and isinstance(v[0], str):
+                        meta_grp.create_dataset(k, data=np.array([s.encode("utf-8") for s in v]))
+                    else:
+                        meta_grp.create_dataset(k, data=np.array(v))
+                elif isinstance(v, np.ndarray):
+                    meta_grp.create_dataset(k, data=v)
 
         # 数据集基本信息写入根属性
         f.attrs["n_samples"] = timeseries.shape[0]

@@ -1,31 +1,19 @@
-# Core
-torch>=2.0.0
-transformers>=4.40.0
+# 数值计算
 numpy>=1.24.0
 scipy>=1.10.0
 
-# PDE / Scientific Computing
-neuraloperator>=0.3.0  # FNO implementation
+# 物理模拟器
+flopy>=3.7.0           # MODFLOW 地下水正演
 
-# 地质数据合成
-flopy>=3.7.0           # MODFLOW 地下水正演（数据合成管线）
-
-# Data
+# 数据存储
 h5py>=3.8.0
-pandas>=2.0.0
 
-# Training
-accelerate>=0.28.0
-peft>=0.10.0
-
-# RL
-trl>=0.8.0  # GRPO / PPO for LLMs
-
-# Logging & Config
-wandb>=0.16.0
+# 配置管理
 pyyaml>=6.0
-omegaconf>=2.3.0
 
-# Utils
+# 进度条
 tqdm>=4.65.0
-einops>=0.7.0
+
+# 测试（开发依赖）
+pytest>=7.0.0
+ruff>=0.3.0

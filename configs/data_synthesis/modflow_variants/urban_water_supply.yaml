@@ -1,0 +1,41 @@
+# 城市供水场景（强抽水、短期）
+# 自动生成，请勿手动编辑
+
+description: 城市供水场景（强抽水、短期）
+output_dir: data/modflow
+output_file: urban_water_supply_groundwater_timeseries.h5
+n_samples: 400
+n_timesteps: 90
+n_wells: 5
+grid:
+  nrow: 20
+  ncol: 20
+  nlay: 1
+  delr: 100.0
+  delc: 100.0
+  top: 10.0
+  botm: 0.0
+params:
+  hk_min: 15.0
+  hk_max: 40.0
+  sy_min: 0.15
+  sy_max: 0.25
+  pumping_min: -800.0
+  pumping_max: -300.0
+  strt_min: 6.0
+  strt_max: 8.0
+  rch_min: 0.0003
+  rch_max: 0.002
+augmentation:
+  identity_ratio: 0.4
+  scaling_ratio: 0.3
+  offset_ratio: 0.3
+  scaling_k_min: 0.8
+  scaling_k_max: 1.2
+  offset_b_std: 0.1
+validation:
+  max_nan_ratio: 0.05
+  min_variance: 1.0e-06
+  max_head_value: 20.0
+  min_head_value: -10.0
+seed: 2493
