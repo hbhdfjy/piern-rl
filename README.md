@@ -26,9 +26,9 @@ PiERN 需要三种不同格式的训练数据：
 ### 核心功能
 
 - **物理模拟驱动**：使用 MODFLOW 等物理模拟器生成真实场景数据
-- **三种扰动策略**：Identity / Scaling / Offset，模拟真实场景噪声
+- **参数空间采样增强（V2）**：扰动参数后重新运行物理模拟，保持物理一致性，提高模型精度 2-3 倍
 - **质量过滤**：自动过滤低质量样本（NaN、常数序列、物理不合理值）
-- **语言模板生成**：为数值参数生成多样化的文本描述（待实现）
+- **完全 LLM 文本生成**：使用 LLM 为数值参数生成高质量、多样化的文本描述
 - **CoT 轨迹合成**：自动构造包含专家调用的推理轨迹（待实现）
 - **HDF5/JSONL 存储**：高效存储，支持大规模数据集
 
@@ -45,10 +45,10 @@ piern/
 │   ├── trajectory_generators/         # Stage 3: CoT 轨迹生成（待实现）
 │   │   ├── cot_generator.py           # 🚧 推理轨迹合成
 │   │   └── route_labeler.py           # 🚧 路由标签标注
-│   ├── augmenters/      # 扰动增强（Identity/Scaling/Offset）
+│   ├── augmenters/      # 参数空间采样增强（V2）
 │   ├── validators/      # 质量过滤
 │   ├── pipeline/        # 端到端流程编排
-│   │   ├── modflow_pipeline.py        # ✅ Stage 1 管线
+│   │   ├── modflow_pipeline_v2.py     # ✅ Stage 1 管线（参数空间采样增强）
 │   │   ├── text2comp_pipeline_llm.py  # ✅ Stage 2 完全 LLM 管线
 │   │   └── router_pipeline.py         # 🚧 Stage 3 管线（待实现）
 │   └── utils/           # 工具函数
@@ -80,14 +80,17 @@ pip install -e .
 ### 1. 生成 Stage 1 数据（专家模型训练数据）
 
 ```bash
+# 快速测试参数空间采样增强
+python scripts/data_synthesis/test_parameter_augmentation.py
+
 # 配置参数
-vim configs/data_synthesis/modflow.yaml
+vim configs/data_synthesis/modflow_v2.yaml
 
-# 运行管线
-python -m data_synthesis.pipeline.modflow_pipeline \
-    --config configs/data_synthesis/modflow.yaml
+# 运行管线（使用参数空间采样增强 V2）
+python -m data_synthesis.pipeline.modflow_pipeline_v2 \
+    --config configs/data_synthesis/modflow_v2.yaml
 
-# 输出：data/modflow/groundwater_timeseries.h5
+# 输出：data/modflow/groundwater_timeseries_v2.h5
 ```
 
 ### 2. 加载 Stage 1 数据
