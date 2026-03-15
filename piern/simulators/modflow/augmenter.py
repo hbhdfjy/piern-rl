@@ -140,22 +140,25 @@ def augment_with_parameter_sampling(
 
     logger.info("运行 MODFLOW 生成增强样本...")
 
+    # P0-1修复：使用指定参数生成样本，而非重新采样
+    from .generator_with_params import generate_sample_from_params
+
     with tqdm(total=N_new, desc="生成增强样本") as pbar:
         for i in range(N_new):
             # 将参数转换为字典格式
             params_dict = {name: float(perturbed_params[i, j])
                           for j, name in enumerate(param_names)}
 
-            # 运行 MODFLOW
-            timeseries, actual_params = generate_sample_fn(modflow_cfg, rng)
+            # ✅ 修复：使用指定参数生成样本（而非重新采样）
+            timeseries = generate_sample_from_params(params_dict, modflow_cfg, rng)
 
-            # 如果 MODFLOW 失败，使用原始样本的参数重试
+            # 如果 MODFLOW 失败，跳过此样本
             if timeseries is None:
-                logger.debug(f"样本 {i} 生成失败，使用原始参数")
+                logger.debug(f"样本 {i} 生成失败（参数扰动后不收敛）")
                 continue
 
             new_timeseries_list.append(timeseries)
-            new_params_list.append([actual_params[name] for name in param_names])
+            new_params_list.append([params_dict[name] for name in param_names])
             pbar.update(1)
 
     if len(new_timeseries_list) == 0:

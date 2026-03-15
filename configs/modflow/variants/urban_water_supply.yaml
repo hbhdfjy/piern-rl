@@ -1,11 +1,9 @@
-# 城市供水场景（强抽水、短期）
-# 自动生成，请勿手动编辑
-
-description: 城市供水场景（强抽水、短期）
+description: "\u57CE\u5E02\u4F9B\u6C34\u573A\u666F\uFF08\u5F3A\u62BD\u6C34\u3001\u77ED\
+  \u671F\uFF09"
 output_dir: data/modflow
 output_file: urban_water_supply_groundwater_timeseries.h5
-n_samples: 400
-n_timesteps: 90
+n_samples: 100000
+n_timesteps: 180
 n_wells: 5
 grid:
   nrow: 20
@@ -20,19 +18,17 @@ params:
   hk_max: 40.0
   sy_min: 0.15
   sy_max: 0.25
-  pumping_min: -800.0
-  pumping_max: -300.0
+  pumping_min: -8000.0
+  pumping_max: -3000.0
   strt_min: 6.0
   strt_max: 8.0
-  rch_min: 0.0003
-  rch_max: 0.002
+  rch_min: 0.0029999999999999996
+  rch_max: 0.02
 augmentation:
-  identity_ratio: 0.4
-  scaling_ratio: 0.3
-  offset_ratio: 0.3
-  scaling_k_min: 0.8
-  scaling_k_max: 1.2
-  offset_b_std: 0.1
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
 validation:
   max_nan_ratio: 0.05
   min_variance: 1.0e-06

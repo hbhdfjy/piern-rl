@@ -1,0 +1,58 @@
+output_dir: data/modflow
+output_file: multilayer_5layers_groundwater_timeseries.h5
+n_samples: 100000
+n_timesteps: 365
+n_wells: 5
+grid:
+  nrow: 20
+  ncol: 20
+  nlay: 5
+  delr: 100.0
+  delc: 100.0
+  top: 50.0
+  botm:
+  - 40.0
+  - 30.0
+  - 20.0
+  - 10.0
+  - 0.0
+params:
+  hk_layer1_min: 20.0
+  hk_layer1_max: 100.0
+  hk_layer2_min: 0.1
+  hk_layer2_max: 1.0
+  hk_layer3_min: 10.0
+  hk_layer3_max: 50.0
+  hk_layer4_min: 0.1
+  hk_layer4_max: 1.0
+  hk_layer5_min: 5.0
+  hk_layer5_max: 30.0
+  vka_min: 0.01
+  vka_max: 5.0
+  sy_min: 0.05
+  sy_max: 0.3
+  pumping_min: -1000.0
+  pumping_max: -200.0
+  strt_layer1_min: 45.0
+  strt_layer1_max: 48.0
+  strt_layer2_min: 38.0
+  strt_layer2_max: 41.0
+  strt_layer3_min: 28.0
+  strt_layer3_max: 31.0
+  strt_layer4_min: 18.0
+  strt_layer4_max: 21.0
+  strt_layer5_min: 8.0
+  strt_layer5_max: 11.0
+  rch_min: 0.0001
+  rch_max: 0.003
+augmentation:
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
+validation:
+  max_nan_ratio: 0.05
+  min_variance: 1.0e-06
+  max_head_value: 55.0
+  min_head_value: -5.0
+seed: 44

@@ -1,10 +1,8 @@
-# 中等渗透含水层（细砂、中砂）
-# 自动生成，请勿手动编辑
-
-description: 中等渗透含水层（细砂、中砂）
+description: "\u4E2D\u7B49\u6E17\u900F\u542B\u6C34\u5C42\uFF08\u7EC6\u7802\u3001\u4E2D\
+  \u7802\uFF09"
 output_dir: data/modflow
 output_file: medium_permeability_groundwater_timeseries.h5
-n_samples: 500
+n_samples: 100000
 n_timesteps: 365
 n_wells: 5
 grid:
@@ -20,19 +18,17 @@ params:
   hk_max: 25.0
   sy_min: 0.1
   sy_max: 0.25
-  pumping_min: -300.0
-  pumping_max: -50.0
+  pumping_min: -3000.0
+  pumping_max: -500.0
   strt_min: 5.0
   strt_max: 9.0
-  rch_min: 0.0002
-  rch_max: 0.002
+  rch_min: 0.002
+  rch_max: 0.02
 augmentation:
-  identity_ratio: 0.4
-  scaling_ratio: 0.3
-  offset_ratio: 0.3
-  scaling_k_min: 0.8
-  scaling_k_max: 1.2
-  offset_b_std: 0.1
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
 validation:
   max_nan_ratio: 0.05
   min_variance: 1.0e-06

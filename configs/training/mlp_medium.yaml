@@ -1,0 +1,33 @@
+# MLP 中等模型配置 - 平衡性能和过拟合
+
+# 模型配置
+model:
+  type: mlp
+  hidden_dims: [128, 256, 128]  # 中等大小
+  dropout: 0.3  # 增加 dropout
+
+# 训练配置
+training:
+  batch_size: 128
+  learning_rate: 0.0005
+  weight_decay: 0.0001  # 更强正则化
+  max_epochs: 200
+  early_stop_r2: 0.90
+  patience: 15
+
+# 数据配置
+data:
+  h5_path: data/modflow/long_term_twoyears_groundwater_timeseries.h5
+  train_ratio: 0.8
+  val_ratio: 0.2
+  normalize_params: true
+  normalize_timeseries: true
+
+# 设备配置
+device: cpu
+
+# 保存配置
+save:
+  model_dir: models
+  model_name: mlp_medium_long_term.pth
+  save_history: true

@@ -1,10 +1,8 @@
-# 湿润区场景（高补给、弱抽水）
-# 自动生成，请勿手动编辑
-
-description: 湿润区场景（高补给、弱抽水）
+description: "\u6E7F\u6DA6\u533A\u573A\u666F\uFF08\u9AD8\u8865\u7ED9\u3001\u5F31\u62BD\
+  \u6C34\uFF09"
 output_dir: data/modflow
 output_file: humid_region_groundwater_timeseries.h5
-n_samples: 400
+n_samples: 100000
 n_timesteps: 365
 n_wells: 5
 grid:
@@ -20,19 +18,17 @@ params:
   hk_max: 50.0
   sy_min: 0.15
   sy_max: 0.3
-  pumping_min: -200.0
-  pumping_max: -50.0
+  pumping_min: -2000.0
+  pumping_max: -500.0
   strt_min: 6.0
   strt_max: 9.0
-  rch_min: 0.002
-  rch_max: 0.008
+  rch_min: 0.02
+  rch_max: 0.08
 augmentation:
-  identity_ratio: 0.4
-  scaling_ratio: 0.3
-  offset_ratio: 0.3
-  scaling_k_min: 0.8
-  scaling_k_max: 1.2
-  offset_b_std: 0.1
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
 validation:
   max_nan_ratio: 0.05
   min_variance: 1.0e-06

@@ -5,6 +5,7 @@
 - 串行运行（安全，便于调试）
 - 并行运行（快速，利用多核）
 - 断点续传（跳过已生成的文件）
+- 检查点功能（自动保存进度）
 """
 
 import argparse
@@ -14,14 +15,42 @@ from pathlib import Path
 from typing import List, Dict
 import yaml
 import os
+import json
 
 
 class BatchMODFLOWGenerator:
     """批量 MODFLOW 数据生成器。"""
 
-    def __init__(self, config_dir: str = "configs/modflow/variants"):
+    def __init__(self, config_dir: str = "configs/modflow/variants", checkpoint_file: str = "logs/checkpoint.json"):
         self.config_dir = Path(config_dir)
         self.modflow_bin = os.path.expanduser("~/bin/mf2005")
+        self.checkpoint_file = Path(checkpoint_file)
+        self.completed_configs = self._load_checkpoint()
+
+    def _load_checkpoint(self) -> List[str]:
+        """加载检查点（优化建议5）"""
+        if self.checkpoint_file.exists():
+            try:
+                with open(self.checkpoint_file, "r") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"警告: 加载检查点失败: {e}")
+                return []
+        return []
+
+    def _save_checkpoint(self, config_name: str):
+        """保存检查点（优化建议5）"""
+        if config_name not in self.completed_configs:
+            self.completed_configs.append(config_name)
+
+        # 确保目录存在
+        self.checkpoint_file.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with open(self.checkpoint_file, "w") as f:
+                json.dump(self.completed_configs, f, indent=2)
+        except Exception as e:
+            print(f"警告: 保存检查点失败: {e}")
 
     def get_all_configs(self) -> List[Path]:
         """获取所有配置文件。"""
@@ -50,10 +79,18 @@ class BatchMODFLOWGenerator:
             "duration": 0.0,
         }
 
+        # 检查检查点（优化建议5）
+        if config_path.name in self.completed_configs:
+            result["success"] = True
+            result["message"] = "已完成（检查点），跳过"
+            return result
+
         # 检查是否已生成
         if skip_existing and self.check_if_generated(config_path):
             result["success"] = True
             result["message"] = "已存在，跳过"
+            # 保存到检查点
+            self._save_checkpoint(config_path.name)
             return result
 
         print(f"\n{'='*70}")
@@ -81,7 +118,7 @@ class BatchMODFLOWGenerator:
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=3600,  # 1 小时超时
+                timeout=7200,  # 2 小时超时（修复问题6：10K样本需要更长时间）
             )
 
             duration = time.time() - start_time
@@ -91,6 +128,8 @@ class BatchMODFLOWGenerator:
                 result["message"] = "成功"
                 result["duration"] = duration
                 print(f"\n✓ 成功！耗时: {duration:.1f}s")
+                # 保存检查点（优化建议5）
+                self._save_checkpoint(config_path.name)
             else:
                 result["message"] = f"失败: {process.stderr[:200]}"
                 print(f"\n✗ 失败！")
@@ -116,6 +155,12 @@ class BatchMODFLOWGenerator:
 
         configs = self.get_all_configs()
         print(f"发现 {len(configs)} 个配置文件")
+
+        # 显示检查点信息（优化建议5）
+        if self.completed_configs:
+            print(f"检查点: 已完成 {len(self.completed_configs)} 个配置")
+            remaining = [c.name for c in configs if c.name not in self.completed_configs]
+            print(f"剩余: {len(remaining)} 个配置")
         print()
 
         if parallel:
@@ -128,16 +173,45 @@ class BatchMODFLOWGenerator:
     ) -> List[Dict]:
         """串行运行。"""
         results = []
+        import time
+        batch_start_time = time.time()
 
         for i, config in enumerate(configs, 1):
-            print(f"\n[{i}/{len(configs)}] 处理: {config.name}")
+            print(f"\n{'='*80}")
+            print(f"场景进度: [{i}/{len(configs)}] ({i/len(configs)*100:.1f}%)")
+            print(f"当前场景: {config.name}")
+            print(f"{'='*80}")
 
+            scenario_start_time = time.time()
             result = self.run_single_config(config, skip_existing)
+            scenario_duration = time.time() - scenario_start_time
             results.append(result)
 
-            # 简要进度
+            # 详细进度统计
             success_count = sum(1 for r in results if r["success"])
-            print(f"\n当前进度: {success_count}/{i} 成功")
+            failed_count = i - success_count
+            elapsed_total = time.time() - batch_start_time
+            avg_time_per_scenario = elapsed_total / i
+            remaining_scenarios = len(configs) - i
+            eta_seconds = remaining_scenarios * avg_time_per_scenario
+
+            # 格式化 ETA
+            if eta_seconds > 3600:
+                eta_str = f"{eta_seconds/3600:.1f}小时"
+            elif eta_seconds > 60:
+                eta_str = f"{eta_seconds/60:.1f}分钟"
+            else:
+                eta_str = f"{eta_seconds:.0f}秒"
+
+            print(f"\n{'─'*80}")
+            print(f"📊 批量进度汇总:")
+            print(f"  ✅ 成功: {success_count}/{i}")
+            print(f"  ❌ 失败: {failed_count}/{i}")
+            print(f"  ⏱️  本场景耗时: {scenario_duration:.1f}秒")
+            print(f"  ⏱️  平均耗时: {avg_time_per_scenario:.1f}秒/场景")
+            print(f"  ⏳ 预计剩余时间: {eta_str}")
+            print(f"  📈 总体进度: {i}/{len(configs)} ({i/len(configs)*100:.1f}%)")
+            print(f"{'─'*80}\n")
 
         return results
 
@@ -256,10 +330,16 @@ def main():
         type=str,
         help="只运行单个配置（文件名，如 baseline.yaml）",
     )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="logs/checkpoint.json",
+        help="检查点文件路径（优化建议5）",
+    )
 
     args = parser.parse_args()
 
-    generator = BatchMODFLOWGenerator(args.config_dir)
+    generator = BatchMODFLOWGenerator(args.config_dir, args.checkpoint)
 
     if args.single:
         # 单个配置

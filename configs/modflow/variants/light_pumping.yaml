@@ -1,10 +1,7 @@
-# 弱抽水场景（合理开采）
-# 自动生成，请勿手动编辑
-
-description: 弱抽水场景（合理开采）
+description: "\u5F31\u62BD\u6C34\u573A\u666F\uFF08\u5408\u7406\u5F00\u91C7\uFF09"
 output_dir: data/modflow
 output_file: light_pumping_groundwater_timeseries.h5
-n_samples: 500
+n_samples: 100000
 n_timesteps: 365
 n_wells: 5
 grid:
@@ -20,19 +17,17 @@ params:
   hk_max: 30.0
   sy_min: 0.1
   sy_max: 0.25
-  pumping_min: -100.0
-  pumping_max: -20.0
+  pumping_min: -1000.0
+  pumping_max: -200.0
   strt_min: 5.0
   strt_max: 9.0
-  rch_min: 0.0005
-  rch_max: 0.003
+  rch_min: 0.005
+  rch_max: 0.03
 augmentation:
-  identity_ratio: 0.4
-  scaling_ratio: 0.3
-  offset_ratio: 0.3
-  scaling_k_min: 0.8
-  scaling_k_max: 1.2
-  offset_b_std: 0.1
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
 validation:
   max_nan_ratio: 0.05
   min_variance: 1.0e-06

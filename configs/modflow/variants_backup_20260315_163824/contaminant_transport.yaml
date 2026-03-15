@@ -1,0 +1,39 @@
+output_dir: data/modflow
+output_file: contaminant_transport_groundwater_timeseries.h5
+n_samples: 100000
+n_timesteps: 365
+n_wells: 5
+grid:
+  nrow: 25
+  ncol: 25
+  nlay: 1
+  delr: 100.0
+  delc: 100.0
+  top: 10.0
+  botm: 0.0
+params:
+  hk_min: 5.0
+  hk_max: 50.0
+  sy_min: 0.05
+  sy_max: 0.3
+  pumping_min: -500.0
+  pumping_max: -50.0
+  strt_min: 5.0
+  strt_max: 9.0
+  rch_min: 0.0001
+  rch_max: 0.002
+  contaminant_source_min: 0.5
+  contaminant_source_max: 2.0
+augmentation:
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
+validation:
+  max_nan_ratio: 0.05
+  min_variance: 1.0e-06
+  max_head_value: 15.0
+  min_head_value: -5.0
+  max_concentration: 1200.0
+  min_concentration: 0.0
+seed: 51

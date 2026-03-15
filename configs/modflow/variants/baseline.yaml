@@ -1,9 +1,6 @@
-# MODFLOW 数据生成配置
-# 自动生成，请勿手动编辑
-
 output_dir: data/modflow
 output_file: baseline_groundwater_timeseries.h5
-n_samples: 1000
+n_samples: 100000
 n_timesteps: 365
 n_wells: 5
 grid:
@@ -19,19 +16,17 @@ params:
   hk_max: 50.0
   sy_min: 0.05
   sy_max: 0.3
-  pumping_min: -500.0
-  pumping_max: -50.0
+  pumping_min: -5000.0
+  pumping_max: -500.0
   strt_min: 5.0
   strt_max: 9.0
-  rch_min: 0.0001
-  rch_max: 0.002
+  rch_min: 0.001
+  rch_max: 0.02
 augmentation:
-  identity_ratio: 0.4
-  scaling_ratio: 0.3
-  offset_ratio: 0.3
-  scaling_k_min: 0.8
-  scaling_k_max: 1.2
-  offset_b_std: 0.1
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
 validation:
   max_nan_ratio: 0.05
   min_variance: 1.0e-06

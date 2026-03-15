@@ -1,0 +1,49 @@
+output_dir: data/modflow
+output_file: geothermal_reservoir_groundwater_timeseries.h5
+n_samples: 100000
+n_timesteps: 365
+n_wells: 5
+grid:
+  nrow: 20
+  ncol: 20
+  nlay: 2
+  delr: 100.0
+  delc: 100.0
+  top: 20.0
+  botm:
+  - 10.0
+  - 0.0
+params:
+  hk_layer1_min: 5.0
+  hk_layer1_max: 30.0
+  hk_layer2_min: 10.0
+  hk_layer2_max: 80.0
+  sy_min: 0.05
+  sy_max: 0.3
+  pumping_min: -8000.0
+  pumping_max: -2000.0
+  injection_min: 200.0
+  injection_max: 600.0
+  strt_layer1_min: 15.0
+  strt_layer1_max: 18.0
+  strt_layer2_min: 5.0
+  strt_layer2_max: 8.0
+  rch_min: 0.001
+  rch_max: 0.01
+  vka_min: 0.1
+  vka_max: 1.0
+  thermal_source_min: 0.5
+  thermal_source_max: 2.0
+augmentation:
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
+validation:
+  max_nan_ratio: 0.05
+  min_variance: 1.0e-06
+  max_head_value: 25.0
+  min_head_value: -5.0
+  max_temperature: 160.0
+  min_temperature: 15.0
+seed: 52

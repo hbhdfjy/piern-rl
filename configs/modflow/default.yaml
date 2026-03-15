@@ -1,70 +1,35 @@
-# MODFLOW 数据合成配置 V2 - 参数空间采样增强
-
-# 输出路径
 output_dir: data/modflow
 output_file: groundwater_timeseries_v2.h5
-
-# 合成规模
-n_samples: 1000          # 生成样本总数
-n_timesteps: 365         # 时间步数（天）
-n_wells: 5               # 观测井数量
-
-# 模型网格
+n_samples: 10000
+n_timesteps: 365
+n_wells: 5
 grid:
-  nrow: 20               # 行数
-  ncol: 20               # 列数
-  nlay: 1                # 层数（单层非承压含水层）
-  delr: 100.0            # 列间距（米）
-  delc: 100.0            # 行间距（米）
-  top: 10.0              # 含水层顶部高程（米）
-  botm: 0.0              # 含水层底部高程（米）
-
-# 参数采样范围（均匀分布）
+  nrow: 20
+  ncol: 20
+  nlay: 1
+  delr: 100.0
+  delc: 100.0
+  top: 10.0
+  botm: 0.0
 params:
-  # 水力传导系数 K（m/day）
   hk_min: 1.0
   hk_max: 50.0
-  # 储水系数（无量纲）
   sy_min: 0.05
-  sy_max: 0.30
-  # 抽水量 Q（m³/day，负值为抽水）
+  sy_max: 0.3
   pumping_min: -500.0
   pumping_max: -50.0
-  # 初始水头（m）
   strt_min: 5.0
   strt_max: 9.0
-  # 补给量 rch（m/day）
   rch_min: 0.0001
   rch_max: 0.002
-
-# 参数空间采样增强（V2 新增）
 augmentation:
-  enabled: true                    # 是否启用增强
-  method: "parameter_sampling"     # 增强方法：parameter_sampling（参数空间采样）
-  n_augmented_per_sample: 0.5      # 每个原始样本生成 0.5 个新样本（总增加 50%）
-  perturbation_ratio: 0.05         # 参数扰动比例 ±5%
-
-  # 说明：
-  # - 对于每个原始样本 (params_0, timeseries_0)
-  # - 在 params_0 邻域采样新参数 params_1 = params_0 × (1 ± 5%)
-  # - 运行 MODFLOW 生成 timeseries_1
-  # - 得到新样本 (params_1, timeseries_1)
-  #
-  # 物理含义：
-  # - 每个新样本都有独立的参数和对应的物理模拟结果
-  # - 保持了参数-时序映射的确定性和物理一致性
-  #
-  # 示例：
-  #   原始样本：hk=15.0 → timeseries=[7.5, 7.4, ...]
-  #   新样本 1：hk=15.6 (+4%) → timeseries=[7.52, 7.42, ...] (MODFLOW 生成)
-  #   新样本 2：hk=14.5 (-3%) → timeseries=[7.48, 7.38, ...] (MODFLOW 生成)
-
-# 质量过滤
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
 validation:
-  max_nan_ratio: 0.05     # 最大允许 NaN 比例
-  min_variance: 0.000001  # 最小方差（过滤常数序列）
-  max_head_value: 15.0    # 最大水头值（超出视为发散）
-  min_head_value: -5.0    # 最小水头值
-
-# 随机种子
+  max_nan_ratio: 0.05
+  min_variance: 1.0e-06
+  max_head_value: 15.0
+  min_head_value: -5.0
 seed: 42

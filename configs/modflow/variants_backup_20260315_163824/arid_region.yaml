@@ -1,0 +1,36 @@
+description: 干旱区场景（低补给、中等抽水）
+output_dir: data/modflow
+output_file: arid_region_groundwater_timeseries.h5
+n_samples: 100000
+n_timesteps: 365
+n_wells: 5
+grid:
+  nrow: 20
+  ncol: 20
+  nlay: 1
+  delr: 100.0
+  delc: 100.0
+  top: 10.0
+  botm: 0.0
+params:
+  hk_min: 3.0
+  hk_max: 20.0
+  sy_min: 0.05
+  sy_max: 0.15
+  pumping_min: -300.0
+  pumping_max: -100.0
+  strt_min: 5.0
+  strt_max: 7.0
+  rch_min: 1.0e-05
+  rch_max: 0.0003
+augmentation:
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
+validation:
+  max_nan_ratio: 0.05
+  min_variance: 1.0e-06
+  max_head_value: 20.0
+  min_head_value: -10.0
+seed: 2165

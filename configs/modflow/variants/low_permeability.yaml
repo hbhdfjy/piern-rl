@@ -1,10 +1,8 @@
-# 低渗透含水层（粉砂、粘土）
-# 自动生成，请勿手动编辑
-
-description: 低渗透含水层（粉砂、粘土）
+description: "\u4F4E\u6E17\u900F\u542B\u6C34\u5C42\uFF08\u7C89\u7802\u3001\u7C98\u571F\
+  \uFF09"
 output_dir: data/modflow
 output_file: low_permeability_groundwater_timeseries.h5
-n_samples: 500
+n_samples: 100000
 n_timesteps: 365
 n_wells: 5
 grid:
@@ -20,19 +18,17 @@ params:
   hk_max: 5.0
   sy_min: 0.01
   sy_max: 0.1
-  pumping_min: -100.0
-  pumping_max: -10.0
+  pumping_min: -1000.0
+  pumping_max: -100.0
   strt_min: 5.0
   strt_max: 9.0
-  rch_min: 1.0e-05
-  rch_max: 0.0005
+  rch_min: 0.0001
+  rch_max: 0.005
 augmentation:
-  identity_ratio: 0.4
-  scaling_ratio: 0.3
-  offset_ratio: 0.3
-  scaling_k_min: 0.8
-  scaling_k_max: 1.2
-  offset_b_std: 0.1
+  enabled: true
+  method: parameter_sampling
+  n_augmented_per_sample: 0.2
+  perturbation_ratio: 0.05
 validation:
   max_nan_ratio: 0.05
   min_variance: 1.0e-06

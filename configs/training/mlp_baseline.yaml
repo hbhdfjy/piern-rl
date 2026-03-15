@@ -1,0 +1,33 @@
+# MLP 基线训练配置
+
+# 模型配置
+model:
+  type: mlp
+  hidden_dims: [64, 128, 64]
+  dropout: 0.2
+
+# 训练配置
+training:
+  batch_size: 256
+  learning_rate: 0.001
+  weight_decay: 0.00001  # L2 正则化
+  max_epochs: 100
+  early_stop_r2: 0.90    # 达到此 R² 则停止训练
+  patience: 10           # 验证集 R² 多少轮不提升则早停
+
+# 数据配置
+data:
+  h5_path: data/modflow/baseline_groundwater_timeseries.h5
+  train_ratio: 0.8
+  val_ratio: 0.2
+  normalize_params: true
+  normalize_timeseries: true
+
+# 设备配置
+device: cpu  # 或 'cuda' 如果有 GPU
+
+# 保存配置
+save:
+  model_dir: models
+  model_name: mlp_baseline.pth
+  save_history: true

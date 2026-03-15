@@ -8,7 +8,7 @@ import numpy as np
 import tempfile
 import logging
 from typing import Dict, Any
-from .modflow_generator import _run_modflow, _get_well_positions
+from .generator import _run_modflow, _get_well_positions
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 def generate_sample_from_params(
     params_dict: Dict[str, float],
     cfg: Dict[str, Any],
+    rng: np.random.Generator | None = None,
 ) -> np.ndarray | None:
     """
     从指定参数生成样本（不采样参数）。
@@ -23,12 +24,17 @@ def generate_sample_from_params(
     Args:
         params_dict: 指定的参数字典，例如 {"hk": 15.0, "sy": 0.12, ...}
         cfg: MODFLOW 配置
+        rng: 随机数生成器（用于非均质场等需要随机性的场景）
 
     Returns:
         timeseries [n_wells, n_timesteps] 或 None（如果失败）
     """
+    # 如果未传入rng，创建一个默认的
+    if rng is None:
+        rng = np.random.default_rng(42)
+
     with tempfile.TemporaryDirectory() as work_dir:
-        ts = _run_modflow(params_dict, cfg, work_dir)
+        ts = _run_modflow(params_dict, cfg, work_dir, rng)
 
     return ts
 

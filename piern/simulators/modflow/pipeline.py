@@ -35,6 +35,7 @@ import yaml
 
 from piern.simulators.modflow.generator import generate_batch
 from piern.simulators.modflow.generator_with_params import generate_batch_from_params
+from piern.simulators.modflow.unified_params import UnifiedParamConverter
 from piern.core.validation import filter_dataset
 from piern.core.storage import save_dataset
 
@@ -159,7 +160,7 @@ def augment_with_parameter_sampling(
 
 def run_pipeline(cfg_path: str) -> str:
     """
-    执行完整合成管线（V2 版本）。
+    执行完整合成管线（V2 版本 + 统一参数表示）。
 
     Args:
         cfg_path: YAML 配置文件路径
@@ -175,10 +176,15 @@ def run_pipeline(cfg_path: str) -> str:
     seed = cfg.get("seed", 42)
     output_path = os.path.join(cfg["output_dir"], cfg["output_file"])
 
+    # 提取场景名称（从文件名）
+    scenario_name = os.path.basename(cfg.get("output_file", "unknown")).replace("_groundwater_timeseries.h5", "")
+
     logger.info(f"===== MODFLOW 数据合成管线 V2 启动 =====")
+    logger.info(f"场景名称: {scenario_name}")
     logger.info(f"目标样本数: {n_samples}")
     logger.info(f"输出路径: {output_path}")
     logger.info(f"增强方法: 参数空间采样")
+    logger.info(f"参数表示: 18维统一参数")
 
     t0 = time.time()
 
@@ -202,22 +208,47 @@ def run_pipeline(cfg_path: str) -> str:
     )
     logger.info(f"  → 增强后共 {aug_ts.shape[0]} 个样本")
 
+    # Step 3.5: 转换为统一参数表示
+    logger.info("Step 3.5/5: 转换为统一参数表示...")
+    converter = UnifiedParamConverter()
+
+    # 将原始参数（5维或更多）转换为统一参数（18维）
+    unified_params_list = []
+    for i in range(len(aug_params)):
+        # 构建原始参数字典
+        original_params_dict = {name: float(aug_params[i, j]) for j, name in enumerate(param_names)}
+
+        # 转换为统一参数
+        unified_params = converter.convert(scenario_name, original_params_dict)
+        unified_params_list.append(unified_params)
+
+    unified_params_array = np.array(unified_params_list, dtype=np.float32)
+    unified_param_names = converter.param_names
+
+    logger.info(f"  → 参数维度: {len(param_names)}维 → {len(unified_param_names)}维")
+    logger.info(f"  → 场景类型: {int(unified_params_array[0, 15])}")
+    logger.info(f"  → 输出类型: {int(unified_params_array[0, 16])}")
+
     # Step 4: 存储
-    logger.info("Step 4/4: 写入 HDF5...")
+    logger.info("Step 4/5: 写入 HDF5...")
     metadata = {
         "config_path": cfg_path,
+        "scenario_name": scenario_name,
         "n_original": timeseries.shape[0],
         "n_augmented": aug_ts.shape[0],
         "augmentation_method": "parameter_sampling",
         "augmentation_config": cfg["augmentation"],
-        "param_names": param_names,
+        "param_names": unified_param_names,  # 使用统一参数名
+        "unified_params_version": "v1.0",
+        "original_param_names": param_names,  # 保留原始参数名用于参考
     }
-    save_dataset(output_path, aug_ts, aug_params, param_names, metadata)
+    save_dataset(output_path, aug_ts, unified_params_array, unified_param_names, metadata)
 
     elapsed = time.time() - t0
     logger.info(f"===== 完成！耗时 {elapsed:.1f}s =====")
-    logger.info(f"数据集形状: timeseries={aug_ts.shape}, params={aug_params.shape}")
+    logger.info(f"数据集形状: timeseries={aug_ts.shape}, params={unified_params_array.shape}")
     logger.info(f"增强比例: {(aug_ts.shape[0] - timeseries.shape[0]) / timeseries.shape[0] * 100:.1f}%")
+    logger.info(f"参数表示: 18维统一参数")
     logger.info(f"输出文件: {output_path}")
 
     return output_path

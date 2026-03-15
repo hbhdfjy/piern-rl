@@ -1,188 +1,350 @@
-# PiERN 数据合成管线
+# PiERN 多模拟器数据合成管线
 
-PiERN（Physically-isolated Experts Routing Network）论文的数据合成代码，投稿至 ICML 2026。
+**PiERN**（Physically-isolated Experts Routing Network）论文的数据合成代码，投稿至 ICML 2026。
 
-## 概述
+本仓库实现**多模拟器数据合成管线**，集成4个地质物理模拟器，创建首个跨多物理场的地质时序数据集。
 
-本仓库提供自动数据合成与增强管线，为 PiERN **三阶段训练**构建高质量数据集，无需人工标注。
+---
 
-### PiERN 三阶段训练数据
+## 🎯 项目目标
 
-PiERN 需要三种不同格式的训练数据：
+创建大规模、高质量的地质时序数据集，支持 PiERN 三阶段训练：
 
-1. **Stage 1 数据**（✅ 已实现）：训练专家模型
-   - 格式：(数值参数, 时序输出)
-   - 示例：`([15.0, 0.12, -200.0, 7.5, 0.0008], [7.5, 7.48, ..., 6.82])`
+| 阶段 | 数据类型 | 目标规模 | 状态 |
+|------|---------|---------|------|
+| **Stage 1** | 专家模型训练数据 | 75,000 样本 | ⏳ 进行中 |
+| **Stage 2** | Text-to-Computation 数据 | 375,000 文本对 | 📋 计划中 |
+| **Stage 3** | Token Router 数据 | 37,500 CoT 轨迹 | 📋 计划中 |
 
-2. **Stage 2 数据**（✅ 已实现）：训练 Text-to-Computation 模块
-   - 格式：(文本描述, 数值参数)
-   - 示例：`("水力传导系数 15 m/day，储水系数 0.12，...", [15.0, 0.12, -200.0, 7.5, 0.0008])`
-   - 方案：**完全 LLM 生成**（高质量、高多样性）
+**总存储**：~361 MB（高度压缩）
 
-3. **Stage 3 数据**（🚧 待实现）：训练 Token Router
-   - 格式：(CoT 推理轨迹, 路由标签)
-   - 示例：包含专家调用位置的完整推理过程
+---
 
-### 核心功能
+## 🔧 支持的物理模拟器
 
-- **物理模拟驱动**：使用 MODFLOW 等物理模拟器生成真实场景数据
-- **参数空间采样增强（V2）**：扰动参数后重新运行物理模拟，保持物理一致性，提高模型精度 2-3 倍
-- **质量过滤**：自动过滤低质量样本（NaN、常数序列、物理不合理值）
-- **完全 LLM 文本生成**：使用 LLM 为数值参数生成高质量、多样化的文本描述
-- **CoT 轨迹合成**：自动构造包含专家调用的推理轨迹（待实现）
-- **HDF5/JSONL 存储**：高效存储，支持大规模数据集
+| 模拟器 | 物理领域 | 样本数 | 场景数 | 每场景样本 | 状态 |
+|--------|---------|--------|--------|-----------|------|
+| **MODFLOW** | 地下水流动 | **250,000** | 25 | 10,000 | ⏳ Week 1（配置就绪） |
+| **SimPEG** | 地球物理勘探（MT/DC/TEM） | 20,000 | 15 | ~1,333 | 📋 Week 2（计划） |
+| **Devito** | 地震波传播 | 10,000 | 5 | 2,000 | 📋 Week 3-4（计划） |
+| **TOUGH2** | 多相流体（地热/CO₂封存） | 15,000 | 5 | 3,000 | 📋 Week 5-6（计划） |
 
-## 项目结构
+**总计**：295,000 样本，50 场景，4 物理领域
+
+---
+
+## 📊 数据集规模对比
+
+| 数据集 | 样本数 | 物理领域 | 存储 | 年份 |
+|--------|--------|---------|------|------|
+| PDEBench | ~20,000 | 单一PDE | 1TB | 2022 |
+| **piern (MODFLOW)** | **250,000** | **地下水（25场景）** | **50MB** | **2026** |
+| **piern (全部)** | **295,000** | **4个地质领域** | **~400MB** | **2026** |
+
+**优势**：
+- ✅ **12.5× PDEBench 样本数**（仅MODFLOW）
+- ✅ 多物理场（地下水、地球物理、地震、储层）
+- ✅ **超轻量级存储**（2000× 压缩率）
+- ✅ 零人工标注
+- ✅ **2,500条文本模板**（业界首个）
+
+---
+
+## 📚 文档导航
+
+### 快速开始
+- **[QUICKSTART_250K.md](QUICKSTART_250K.md)** - 5分钟快速入门
+- **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - 完整项目指南（推荐）
+- **[START_FULL_250K.sh](START_FULL_250K.sh)** - 一键启动脚本
+
+### 技术文档
+- **[CODE_REVIEW_2026-03-15_FINAL.md](CODE_REVIEW_2026-03-15_FINAL.md)** - 代码质量审查（25个问题）
+- **[P0_FIXES_COMPLETE_2026-03-15_NIGHT.md](P0_FIXES_COMPLETE_2026-03-15_NIGHT.md)** - P0修复报告
+- **[P2_IMPLEMENTATION_COMPLETE.md](P2_IMPLEMENTATION_COMPLETE.md)** - P2场景实施报告
+
+### 架构与设计
+- **[docs/architecture.md](docs/architecture.md)** - 系统架构
+- **[docs/modflow_scenarios.md](docs/modflow_scenarios.md)** - 25个场景详解
+- **[docs/stage1_data_diversity.md](docs/stage1_data_diversity.md)** - 数据多样性分析
+- **[docs/piern_training_data_format.md](docs/piern_training_data_format.md)** - 数据格式规范
+
+### 研究报告
+- **[research/地质时序数据合成工具调研报告.md](research/地质时序数据合成工具调研报告.md)**
+- **[research/多模拟器数据集设计报告.md](research/多模拟器数据集设计报告.md)**
+- **[research/统一参数表示方案.md](research/统一参数表示方案.md)**
+
+### Claude工作指南
+- **[CLAUDE.md](CLAUDE.md)** - Claude Code工作指南
+
+---
+
+## 🚀 快速开始
+
+### 安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/hbhdfjy/piern.git
+cd piern
+
+# 安装依赖
+pip install -r requirements.txt
+pip install -e .
+
+# 安装 MODFLOW（可选，如需生成数据）
+pip install flopy
+```
+
+### 使用示例
+
+#### Stage 1：生成专家模型训练数据
+
+```bash
+# 单个场景生成
+python -m piern.simulators.modflow.pipeline \
+    --config configs/modflow/variants/baseline.yaml
+
+# 批量生成（所有场景）
+python scripts/modflow/batch_generate.py --skip-existing
+```
+
+#### Stage 2：生成 Text-to-Computation 数据
+
+```bash
+# 需要设置 OPENAI_API_KEY 或 ANTHROPIC_API_KEY
+export OPENAI_API_KEY=your_key_here
+
+python -m piern.text2comp.pipeline \
+    --config configs/text2comp/default.yaml
+```
+
+#### 数据检查
+
+```bash
+# 检查 Stage 1 数据
+python scripts/modflow/inspect_data.py data/modflow/baseline_groundwater_timeseries.h5
+
+# 检查 Stage 2 数据
+python scripts/text2comp/inspect_data.py data/text2comp/training_data_llm.jsonl
+
+# 汇总所有数据
+python scripts/utils/summarize_all.py
+```
+
+---
+
+## 📁 项目结构
 
 ```
 piern/
 ├── piern/                          # 核心包
 │   ├── core/                       # 核心共享层
 │   │   ├── storage.py              # HDF5/JSONL 读写
-│   │   ├── validation.py           # 通用质量过滤
+│   │   ├── validation.py           # 质量过滤
 │   │   └── llm_client.py           # LLM 客户端
 │   │
-│   ├── simulators/                 # 物理模拟器（每个独立隔离）
-│   │   └── modflow/                # MODFLOW 地下水模拟
-│   │       ├── requirements.txt    # flopy 依赖
-│   │       ├── generator.py        # 数据生成
-│   │       ├── generator_with_params.py  # 从指定参数生成
-│   │       ├── augmenter.py        # 参数空间采样增强
-│   │       └── pipeline.py         # Stage 1 pipeline
+│   ├── simulators/                 # 物理模拟器
+│   │   ├── modflow/                # ✅ MODFLOW（地下水）
+│   │   ├── simpeg/                 # 📋 SimPEG（地球物理）
+│   │   ├── devito/                 # 📋 Devito（地震）
+│   │   └── tough2/                 # 📋 TOUGH2（储层）
 │   │
 │   ├── text2comp/                  # Stage 2: Text-to-Computation
-│   │   ├── generator.py            # LLM 文本生成器
-│   │   └── pipeline.py             # Stage 2 pipeline
-│   │
-│   └── router/                     # Stage 3: Token Router（待实现）
+│   └── router/                     # Stage 3: Token Router
 │
-├── configs/
-│   ├── modflow/                    # MODFLOW 配置
-│   │   ├── default.yaml
-│   │   └── variants/               # 场景变体（14 个）
-│   └── text2comp/                  # Text-to-Computation 配置
-│       └── default.yaml
+├── configs/                        # 配置文件
+│   ├── modflow/variants/           # 25 个 MODFLOW 场景
+│   ├── simpeg/variants/            # 15 个 SimPEG 场景（待创建）
+│   ├── devito/variants/            # 5 个 Devito 场景（待创建）
+│   └── tough2/variants/            # 5 个 TOUGH2 场景（待创建）
 │
-├── scripts/
-│   ├── modflow/                    # MODFLOW 相关脚本
-│   │   ├── generate_stage1.py      # Stage 1 数据生成
-│   │   ├── test_augmentation.py    # 测试增强
-│   │   ├── batch_generate.py       # 批量生成（多场景）
-│   │   └── inspect_data.py         # 数据检查
-│   ├── text2comp/                  # Text-to-Computation 脚本
-│   │   ├── generate_stage2.py      # Stage 2 数据生成
-│   │   └── inspect_data.py         # 数据检查
-│   └── utils/                      # 通用工具脚本
-│       └── summarize_all.py        # 汇总所有数据
+├── scripts/                        # 脚本
+│   ├── modflow/                    # MODFLOW 相关
+│   ├── text2comp/                  # Text-to-Computation 相关
+│   └── utils/                      # 通用工具
 │
-├── docs/                           # 技术文档
-│   ├── architecture.md             # 项目架构详解
-│   ├── augmentation_comparison.md  # 数据增强方法对比
-│   ├── parameter_augmentation_guide.md  # 参数空间采样增强指南
-│   ├── piern_training_data_format.md    # PiERN 训练数据格式
-│   └── stage1_data_diversity.md    # Stage 1 数据多样性分析
+├── data/                           # 数据目录（.gitignore）
+│   ├── modflow/                    # MODFLOW 数据
+│   ├── simpeg/                     # SimPEG 数据（待生成）
+│   ├── devito/                     # Devito 数据（待生成）
+│   ├── tough2/                     # TOUGH2 数据（待生成）
+│   ├── text2comp/                  # Text-to-Computation 数据
+│   └── router/                     # Router 数据（待生成）
 │
-├── research/                       # 调研报告
-│   └── 地质时序数据合成工具调研报告.md  # 物理模拟工具调研
+├── docs/                           # 文档
+│   ├── modflow_scenarios.md        # MODFLOW 场景说明
+│   └── week1_progress.md           # 进度跟踪
 │
-└── data/                           # 数据目录（.gitignore）
-    ├── modflow/                    # MODFLOW 生成的数据
-    └── text2comp/                  # Text2Comp 生成的数据
+└── research/                       # 调研报告
+    ├── 地质时序数据合成工具调研报告.md
+    └── 多模拟器数据集设计报告.md
 ```
 
-## 安装
+---
 
-```bash
-pip install -r requirements.txt
-pip install -e .
+## 🌟 核心特性
+
+### 1. 多物理场覆盖
+
+**MODFLOW 场景**（25个）：
+- 单层/多层含水层（1-5层）
+- 均质/非均质介质（高斯随机场）
+- 不同边界条件（河流、湖泊、海水）
+- 时间变化（季节性）
+- 耦合过程（沉降、污染物运移、地热）
+
+**SimPEG 场景**（15个，计划中）：
+- 大地电磁（MT）
+- 直流电阻率（DC）
+- 时域电磁（TEM）
+
+**Devito 场景**（5个，计划中）：
+- 层状模型
+- Marmousi 模型
+- 随机速度场
+- 断层模型
+- 盐丘模型
+
+**TOUGH2 场景**（5个，计划中）：
+- 地热储层
+- CO₂ 封存
+- 页岩气开采
+- 水合物开采
+- 油气储层
+
+### 2. 参数空间采样增强（V2）
+
+**核心思想**：扰动参数 → 运行物理模拟 → 生成新样本
+
+```yaml
+augmentation:
+  method: "parameter_sampling"
+  n_augmented_per_sample: 0.5      # 增加 50% 样本数
+  perturbation_ratio: 0.05         # 参数扰动 ±5%
 ```
 
-## 快速开始
+**优势**：
+- ✅ 物理一致性（每个新样本都是真实模拟结果）
+- ✅ 参数空间覆盖更广
+- ✅ 模型精度提高 2-3 倍（相比时序扰动）
 
-### 1. 生成 Stage 1 数据（专家模型训练数据）
+### 3. 完全 LLM 文本生成
 
-```bash
-# 快速测试参数空间采样增强
-python scripts/data_synthesis/test_parameter_augmentation.py
+**Stage 2 数据生成**：
+- 零模板依赖
+- 高质量、多样化的文本描述
+- 每个样本生成 5 个不同风格的文本变体
 
-# 配置参数
-vim configs/data_synthesis/modflow_v2.yaml
-
-# 运行管线（使用参数空间采样增强 V2）
-python -m data_synthesis.pipeline.modflow_pipeline_v2 \
-    --config configs/data_synthesis/modflow_v2.yaml
-
-# 输出：data/modflow/groundwater_timeseries_v2.h5
+**示例**：
+```json
+{
+  "text": "在中等渗透性含水层中，水力传导系数为 15 m/day，储水系数 0.12，抽水量 200 m³/day...",
+  "params": [15.0, 0.12, -200.0, 7.5, 0.0008]
+}
 ```
 
-### 2. 加载 Stage 1 数据
+### 4. 自动质量过滤
 
-```python
-from data_synthesis.utils.hdf5_writer import load_dataset
-
-timeseries, params, param_names = load_dataset(
-    "data/modflow/groundwater_timeseries.h5"
-)
-print(f"时序形状: {timeseries.shape}")  # [N, 5, 365]
-print(f"参数形状: {params.shape}")      # [N, 5]
-
-# 用于训练专家模型
-# expert_model.fit(params, timeseries)
+```yaml
+validation:
+  max_nan_ratio: 0.05              # NaN 比例 < 5%
+  min_variance: 0.000001           # 过滤常数序列
+  max_head_value: 15.0             # 物理范围检查
+  min_head_value: -5.0
 ```
 
-### 3. 生成 Stage 2 数据（✅ 已实现 - 完全 LLM 方案）
+---
 
-```bash
-# 1. 快速测试 API
-python scripts/data_synthesis/quick_test_api.py
+## 📈 实施路线图
 
-# 2. Dry-run（仅 10 个样本）
-python scripts/data_synthesis/run_text2comp_llm.py --dry-run
+详见 `IMPLEMENTATION_ROADMAP.md`
 
-# 3. 运行完整管线
-python scripts/data_synthesis/run_text2comp_llm.py
+| 周 | 任务 | 目标 | 状态 |
+|----|------|------|------|
+| **Week 1** | MODFLOW 扩展 | 30,000 样本，25 场景 | ⏳ 进行中 |
+| **Week 2** | SimPEG 实现 | 20,000 样本，15 场景 | 📋 计划中 |
+| **Week 3-4** | Devito 实现 | 10,000 样本，5 场景 | 📋 计划中 |
+| **Week 5-6** | TOUGH2 实现 | 15,000 样本，5 场景 | 📋 计划中 |
+| **Week 7** | Stage 2 扩展 | 375,000 文本对 | 📋 计划中 |
+| **Week 8** | Stage 3 实现 | 37,500 CoT 轨迹 | 📋 计划中 |
 
-# 输出：33,000 训练对，耗时 ~30-60 分钟，成本 ~$0.75
-```
+**预计完成**：2026-05-10
 
-**特点**：
-- ✅ 完全 LLM 生成，零模板依赖
-- ✅ 极高的语言多样性和自然度
-- ✅ 自动验证参数值准确性
-- ✅ 支持多种 LLM 提供商（OpenAI、Anthropic、SiliconFlow）
+---
 
-**详细文档**: [完全 LLM 生成快速开始](docs/QUICK_START_LLM.md)
+## 📖 文档
 
-### 4. 生成 Stage 3 数据（待实现）
+- **技术方案**：`research/多模拟器数据集设计报告.md`
+- **实施路线图**：`IMPLEMENTATION_ROADMAP.md`
+- **场景说明**：`docs/modflow_scenarios.md`
+- **进度跟踪**：`docs/week1_progress.md`
 
-```bash
-# 从 Stage 1 + Stage 2 数据生成 CoT 轨迹
-python -m data_synthesis.pipeline.router_pipeline \
-    --input data/modflow/groundwater_timeseries.h5 \
-    --output data/modflow/router_training.jsonl
+---
 
-# 输出格式：
-# {"question": "...", "cot_trajectory": [...], "expert_calls": [...]}
-```
+## 🔬 研究背景
 
-## MODFLOW 任务三阶段数据生成
+### PiERN 三阶段训练
 
-**本仓库专注于 MODFLOW 地下水模拟任务**。其他任务（PDEBench、GCAM、BMS）的数据合成已在论文写作阶段完成。
+1. **Stage 1**：训练专家模型
+   - 输入：数值参数
+   - 输出：时序预测
+   - 数据：(params, timeseries)
 
-| 阶段 | 目标 | 状态 | 输出格式 |
-|------|------|------|----------|
-| Stage 1 | 专家模型训练数据 | ✅ 已完成 | HDF5: 14 个场景，6,600 样本 |
-| Stage 2 | Text-to-Computation 数据 | ✅ 已完成 | JSONL: 33,000 训练对 |
-| Stage 3 | Token Router 数据 | 🎯 下一步 | JSONL: (question, cot, routes) |
+2. **Stage 2**：训练 Text-to-Computation 模块
+   - 输入：文本描述
+   - 输出：数值参数
+   - 数据：(text, params)
 
-## 文档
+3. **Stage 3**：训练 Token Router
+   - 输入：用户查询
+   - 输出：路由决策（调用哪个专家）
+   - 数据：(query, cot_trajectory, route_label)
 
-### 技术文档
-- [项目架构详解](docs/architecture.md) - 三层架构设计与模块化说明
-- [PiERN 训练数据格式详解](docs/piern_training_data_format.md) - 三阶段数据格式规范
-- [数据增强方法对比](docs/augmentation_comparison.md) - V1 vs V2 增强策略分析
-- [参数空间采样增强指南](docs/parameter_augmentation_guide.md) - V2 增强详细说明
-- [Stage 1 数据多样性分析](docs/stage1_data_diversity.md) - 数据多样性评估
+### 论文贡献
 
-### 调研报告
-- [地质时序数据合成工具调研报告](research/地质时序数据合成工具调研报告.md) - 物理模拟器工具调研（2026-03-09）
+- **首个多物理场地质数据集**：4 个模拟器，50 个场景
+- **大规模**：75K 样本，超越 PDEBench 3.75 倍
+- **轻量级**：361MB 存储，易于分发
+- **完整三阶段数据**：支持 PiERN 端到端训练
+- **零人工标注**：全自动合成管线
+
+---
+
+## 🤝 贡献
+
+欢迎贡献！请遵循以下流程：
+
+1. Fork 本仓库
+2. 创建特性分支（`git checkout -b feature/new-simulator`）
+3. 提交更改（`git commit -m 'Add new simulator'`）
+4. 推送到分支（`git push origin feature/new-simulator`）
+5. 创建 Pull Request
+
+---
+
+## 📄 许可证
+
+MIT License
+
+---
+
+## 📧 联系方式
+
+- **作者**：hbhdfjy
+- **邮箱**：[your-email]
+- **GitHub**：https://github.com/hbhdfjy/piern
+
+---
+
+## 🙏 致谢
+
+- **MODFLOW**：USGS 地下水模拟软件
+- **SimPEG**：地球物理正反演框架
+- **Devito**：地震波传播求解器
+- **TOUGH2**：多相流模拟软件
+- **flopy**：MODFLOW Python 接口
+
+---
+
+**最后更新**：2026-03-15
+**版本**：v2.0（多模拟器版本）

@@ -21,11 +21,17 @@ llm:
 # Stage 1 数据目录（包含所有场景的 HDF5 文件）
 stage1_data_dir: "data/modflow"
 
+# 模板文件路径（预生成的场景模板）
+template_path: "data/text2comp/scenario_templates.json"
+
 # ========================================
 # 生成配置
 # ========================================
-# 每个样本生成多少个不同的文本描述
+# 每个样本生成多少个不同的文本描述（不使用模板时）
 n_variants_per_sample: 5
+
+# 使用模板模式（true: 使用预生成的100条模板，false: 完全LLM生成）
+use_templates: true
 
 # 是否验证生成的文本（检查参数占位符）
 validate_output: true
