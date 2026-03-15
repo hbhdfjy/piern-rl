@@ -36,36 +36,58 @@ PiERN 需要三种不同格式的训练数据：
 
 ```
 piern/
-├── data_synthesis/      # 数据合成管线
-│   ├── generators/      # Stage 1: 物理模拟数据生成
-│   │   └── modflow_generator.py       # ✅ MODFLOW 地下水位
-│   ├── text_generators/ # Stage 2: 文本-参数对生成
-│   │   ├── llm_client.py              # ✅ LLM 客户端
-│   │   └── llm_text_generator.py      # ✅ 完全 LLM 生成
-│   ├── trajectory_generators/         # Stage 3: CoT 轨迹生成（待实现）
-│   │   ├── cot_generator.py           # 🚧 推理轨迹合成
-│   │   └── route_labeler.py           # 🚧 路由标签标注
-│   ├── augmenters/      # 参数空间采样增强（V2）
-│   ├── validators/      # 质量过滤
-│   ├── pipeline/        # 端到端流程编排
-│   │   ├── modflow_pipeline_v2.py     # ✅ Stage 1 管线（参数空间采样增强）
-│   │   ├── text2comp_pipeline_llm.py  # ✅ Stage 2 完全 LLM 管线
-│   │   └── router_pipeline.py         # 🚧 Stage 3 管线（待实现）
-│   └── utils/           # 工具函数
+├── piern/                          # 核心包
+│   ├── core/                       # 核心共享层
+│   │   ├── storage.py              # HDF5/JSONL 读写
+│   │   ├── validation.py           # 通用质量过滤
+│   │   └── llm_client.py           # LLM 客户端
+│   │
+│   ├── simulators/                 # 物理模拟器（每个独立隔离）
+│   │   └── modflow/                # MODFLOW 地下水模拟
+│   │       ├── requirements.txt    # flopy 依赖
+│   │       ├── generator.py        # 数据生成
+│   │       ├── generator_with_params.py  # 从指定参数生成
+│   │       ├── augmenter.py        # 参数空间采样增强
+│   │       └── pipeline.py         # Stage 1 pipeline
+│   │
+│   ├── text2comp/                  # Stage 2: Text-to-Computation
+│   │   ├── generator.py            # LLM 文本生成器
+│   │   └── pipeline.py             # Stage 2 pipeline
+│   │
+│   └── router/                     # Stage 3: Token Router（待实现）
+│
 ├── configs/
-│   └── data_synthesis/  # 配置文件（YAML）
+│   ├── modflow/                    # MODFLOW 配置
+│   │   ├── default.yaml
+│   │   └── variants/               # 场景变体（14 个）
+│   └── text2comp/                  # Text-to-Computation 配置
+│       └── default.yaml
+│
 ├── scripts/
-│   └── data_synthesis/  # 运行脚本
-├── tests/
-│   └── test_data_synthesis/  # 单元测试
-├── docs/
-│   ├── data_synthesis_overview.md        # 数据合成管线详解
-│   └── piern_training_data_format.md     # PiERN 训练数据格式详解
-└── data/                # 输出数据目录
-    └── modflow/
-        ├── groundwater_timeseries.h5     # ✅ Stage 1 数据
-        ├── text2comp_training.jsonl      # 🚧 Stage 2 数据
-        └── router_training.jsonl         # 🚧 Stage 3 数据
+│   ├── modflow/                    # MODFLOW 相关脚本
+│   │   ├── generate_stage1.py      # Stage 1 数据生成
+│   │   ├── test_augmentation.py    # 测试增强
+│   │   ├── batch_generate.py       # 批量生成（多场景）
+│   │   └── inspect_data.py         # 数据检查
+│   ├── text2comp/                  # Text-to-Computation 脚本
+│   │   ├── generate_stage2.py      # Stage 2 数据生成
+│   │   └── inspect_data.py         # 数据检查
+│   └── utils/                      # 通用工具脚本
+│       └── summarize_all.py        # 汇总所有数据
+│
+├── docs/                           # 技术文档
+│   ├── architecture.md             # 项目架构详解
+│   ├── augmentation_comparison.md  # 数据增强方法对比
+│   ├── parameter_augmentation_guide.md  # 参数空间采样增强指南
+│   ├── piern_training_data_format.md    # PiERN 训练数据格式
+│   └── stage1_data_diversity.md    # Stage 1 数据多样性分析
+│
+├── research/                       # 调研报告
+│   └── 地质时序数据合成工具调研报告.md  # 物理模拟工具调研
+│
+└── data/                           # 数据目录（.gitignore）
+    ├── modflow/                    # MODFLOW 生成的数据
+    └── text2comp/                  # Text2Comp 生成的数据
 ```
 
 ## 安装
@@ -155,6 +177,12 @@ python -m data_synthesis.pipeline.router_pipeline \
 
 ## 文档
 
-- [数据合成管线详解](docs/data_synthesis_overview.md) - 完整的设计文档和使用指南
+### 技术文档
+- [项目架构详解](docs/architecture.md) - 三层架构设计与模块化说明
 - [PiERN 训练数据格式详解](docs/piern_training_data_format.md) - 三阶段数据格式规范
-- [项目路线图](ROADMAP.md) - ⭐ **MODFLOW 三阶段攻关计划**
+- [数据增强方法对比](docs/augmentation_comparison.md) - V1 vs V2 增强策略分析
+- [参数空间采样增强指南](docs/parameter_augmentation_guide.md) - V2 增强详细说明
+- [Stage 1 数据多样性分析](docs/stage1_data_diversity.md) - 数据多样性评估
+
+### 调研报告
+- [地质时序数据合成工具调研报告](research/地质时序数据合成工具调研报告.md) - 物理模拟器工具调研（2026-03-09）
